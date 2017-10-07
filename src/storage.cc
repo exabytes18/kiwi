@@ -9,12 +9,13 @@
 Storage::Storage(ServerConfig const& server_config) {
     rocksdb::Options options;
     options.IncreaseParallelism();
-    options.use_direct_reads = true;
-    options.use_direct_io_for_flush_and_compaction = true;
+    options.max_file_opening_threads = -1;
+    options.max_background_jobs = 4;
+    options.recycle_log_file_num = 1;
     options.compression = rocksdb::kLZ4Compression;
-    options.compaction_readahead_size = 4 * 1024 * 1024;
-    options.writable_file_max_buffer_size = 4 * 1024 * 1024;
-    options.bytes_per_sync = 4 * 1024 * 1024;
+    options.compaction_readahead_size = 2 * 1024 * 1024;
+    options.writable_file_max_buffer_size = 2 * 1024 * 1024;
+    options.bytes_per_sync = 1024 * 1024;
     options.target_file_size_base = 256 * 1024 * 1024;
     options.create_if_missing = true;
     options.create_missing_column_families = true;
