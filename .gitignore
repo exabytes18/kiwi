@@ -5,7 +5,7 @@ cmake_install.cmake
 config.h
 
 # binaries
-kiwi
+kiwidb
 
 # local database directory
-kiwidb
+data

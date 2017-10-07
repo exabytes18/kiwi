@@ -13,15 +13,15 @@ using namespace std;
 class Server {
 public:
     Server(ServerConfig const& server_config, Storage& storage);
-    ~Server();
+    ~Server(void);
     void Start(void);
     void Shutdown(void);
 
     class ClusterNode {
     public:
-        ClusterNode(uint32_t id, string& address, int port, Server& server);
-        ~ClusterNode();
-        void Start(void); // Start thread and try to establish a connection
+        ClusterNode(uint32_t id, string const& address, int port, Server& server);
+        ~ClusterNode(void);
+        void Start(void);
         void IncomingConnection(int fd);
         void Shutdown(void);
     
@@ -33,7 +33,6 @@ public:
     };
 
 private:
-    bool shutdown_pipe_initialized;
     int shutdown_pipe[2];
     Storage& storage;
     unordered_map<uint32_t, ClusterNode*> cluster_nodes;

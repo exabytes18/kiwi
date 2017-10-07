@@ -16,38 +16,38 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # compiler flags
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
-add_definitions(-Wall -Wextra -pedantic -std=c++14)
+add_definitions(-Wall -Wextra -Wold-style-cast -pedantic -std=c++14)
 
 # declare our executable
-add_executable(kiwi ${SOURCES})
+add_executable(kiwidb ${SOURCES})
 
 # pthreads
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
-target_link_libraries(kiwi ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(kiwidb ${CMAKE_THREAD_LIBS_INIT})
 
 # yaml-cpp
 find_package(yaml-cpp REQUIRED)
 include_directories(${YAML_CPP_INCLUDE_DIR})
-target_link_libraries(kiwi ${YAML_CPP_LIBRARIES})
+target_link_libraries(kiwidb ${YAML_CPP_LIBRARIES})
 
 # bz2 (needed for rocksdb)
 find_package(bz2 REQUIRED)
-target_link_libraries(kiwi ${BZ2_LIBRARIES})
+target_link_libraries(kiwidb ${BZ2_LIBRARIES})
 
 # lz4 (needed for rocksdb)
 find_package(lz4 REQUIRED)
-target_link_libraries(kiwi ${LZ4_LIBRARIES})
+target_link_libraries(kiwidb ${LZ4_LIBRARIES})
 
 # snappy (needed for rocksdb)
 find_package(snappy REQUIRED)
-target_link_libraries(kiwi ${SNAPPY_LIBRARIES})
+target_link_libraries(kiwidb ${SNAPPY_LIBRARIES})
 
 # zlib (needed for rocksdb)
 find_package(zlib REQUIRED)
-target_link_libraries(kiwi ${ZLIB_LIBRARIES})
+target_link_libraries(kiwidb ${ZLIB_LIBRARIES})
 
 # rocksdb
 find_package(rocksdb REQUIRED)
 include_directories(${ROCKSDB_INCLUDE_DIR})
-target_link_libraries(kiwi ${ROCKSDB_LIBRARIES})
+target_link_libraries(kiwidb ${ROCKSDB_LIBRARIES})

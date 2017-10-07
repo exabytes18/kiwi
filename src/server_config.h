@@ -11,10 +11,10 @@ class ServerConfig {
 public:
     ServerConfig(string const& cluster_name, uint32_t server_id, unordered_map<uint32_t, string> const& hosts, string const& data_dir);
     static ServerConfig ParseFromFile(char const * config_path);
-    string const& ClusterName() const;
-    uint32_t ServerId() const;
-    unordered_map<uint32_t, string> const& Hosts() const;
-    string const& DataDir() const;
+    string const& ClusterName(void) const;
+    uint32_t ServerId(void) const;
+    unordered_map<uint32_t, string> const& Hosts(void) const;
+    string const& DataDir(void) const;
 
 private:
     string cluster_name;

@@ -6,17 +6,11 @@
 
 
 Server::Server(ServerConfig const& server_config, Storage& storage) :
-        shutdown_pipe_initialized(false),
         storage(storage),
         cluster_nodes(),
         acceptor_thread_created(false) {
 
-    shutdown_pipe[0] = -1;
-    shutdown_pipe[1] = -1;
-
-    if (pipe(shutdown_pipe) == 0) {
-        shutdown_pipe_initialized = true;
-    } else {
+    if (pipe(shutdown_pipe) != 0) {
         throw ServerException("Error creating shutdown pipe: " + string(strerror(errno)));
     }
 
@@ -25,25 +19,22 @@ Server::Server(ServerConfig const& server_config, Storage& storage) :
         for (auto it = hosts.begin(); it != hosts.end(); ++it) {
             auto id = it->first;
             auto host = it->second;
-            ClusterNode* cluster_node = new ClusterNode(id, host, 1, *this);
-            try {
-                cluster_nodes[id] = cluster_node;
-            } catch(...) {
-                delete cluster_node;
-                throw;
-            }
+            cluster_nodes[id] = new ClusterNode(id, host, 1, *this);
         }
     } catch (...) {
+        close(shutdown_pipe[0]);
+        close(shutdown_pipe[1]);
+        
         for (auto it = cluster_nodes.begin(); it != cluster_nodes.end(); ++it) {
-            delete it->second;
+            auto cluster_node = it->second;
+            delete cluster_node;
         }
-        cluster_nodes.clear();
         throw;
     }
 }
 
 
-Server::~Server() {
+Server::~Server(void) {
     for (auto it = cluster_nodes.begin(); it != cluster_nodes.end(); ++it) {
         auto cluster_node = it->second;
         cluster_node->Shutdown();
@@ -57,11 +48,14 @@ Server::~Server() {
             abort();
         }
     }
+
+    close(shutdown_pipe[0]);
+    close(shutdown_pipe[1]);
 }
 
 
 void* AcceptorThread(void* ptr) {
-    Server* server = (Server *)ptr;
+    Server* server = static_cast<Server*>(ptr);
     return nullptr;
 }
 
@@ -85,7 +79,7 @@ void Server::Shutdown(void) {
 }
 
 
-Server::ClusterNode::ClusterNode(uint32_t id, string& address, int port, Server& server) :
+Server::ClusterNode::ClusterNode(uint32_t id, string const& address, int port, Server& server) :
         id(id),
         address(address),
         port(port),
@@ -104,5 +98,5 @@ void Server::ClusterNode::Shutdown(void) {
 }
 
 
-Server::ClusterNode::~ClusterNode() {
+Server::ClusterNode::~ClusterNode(void) {
 }

@@ -9,7 +9,7 @@ using namespace std;
 class Storage {
 public:
     Storage(ServerConfig const& server_config);
-    ~Storage();
+    ~Storage(void);
 
 private:
     rocksdb::DB* db;

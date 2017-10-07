@@ -39,4 +39,4 @@ hosts:
     1: 127.0.0.1
 
 # Local directory to which data is stored.
-data_dir: kiwidb
+data_dir: data

@@ -39,6 +39,6 @@ Storage::Storage(ServerConfig const& server_config) {
 }
 
 
-Storage::~Storage() {
+Storage::~Storage(void) {
     delete db;
 }
