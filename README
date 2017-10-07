@@ -5,9 +5,3 @@ make -j VERBOSE=1
 # Building release:
 cmake . -DCMAKE_BUILD_TYPE=Release
 make -j
-
-
-
-Coding style:
-    - return status object, pass result via reference parameter
-    - no use of exceptions

@@ -4,22 +4,19 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
-#include "status.h"
 
 using namespace std;
 
 class ServerConfig {
 public:
-    ServerConfig();
-    string const ClusterName() const;
+    ServerConfig(string const& cluster_name, uint32_t server_id, unordered_map<uint32_t, string> const& hosts, string const& data_dir);
+    static ServerConfig ParseFromFile(char const * config_path);
+    string const& ClusterName() const;
     uint32_t ServerId() const;
-    unordered_map<uint32_t, string> Hosts();
-    string DataDir() const;
-    Status PopulateFromFile(char const* config_path);
+    unordered_map<uint32_t, string> const& Hosts() const;
+    string const& DataDir() const;
 
 private:
-    // strings use dynamic memory internally, so this is fine
-    // (this->cluster_name isn't constrainted or anything).
     string cluster_name;
     uint32_t server_id;
     unordered_map<uint32_t, string> hosts;
