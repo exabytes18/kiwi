@@ -5,6 +5,13 @@ cluster_name: Yellow Kiwi
 # multiple servers will lead to undefined behavior, possibly up to and including data loss.
 server_id: 1
 
+# For local testing, it's good practice to bind only to 127.0.0.1.
+# For multi-host deployments, make sure to bind to either the machine's IP or a wildcard address
+# (e.g. 0.0.0.0).
+#
+# Note: the port will default to 12312 if not specified.
+bind_address: 127.0.0.1:12312
+
 # All servers participating in the cluster must be identified and listed here. Quorum majority
 # is determined by the hosts listed here. When changing this value for an operating cluster,
 # you must ensure that all possible majority combinations of the new value must contain at least
@@ -36,7 +43,11 @@ server_id: 1
 #     old value, this can lead to inconsistency.
 #
 hosts:
-    1: 127.0.0.1
+    1: 127.0.0.1:12312
 
 # Local directory to which data is stored.
 data_dir: data
+
+# Optional
+ipv4: true
+ipv6: true

@@ -3,36 +3,40 @@
 
 #include <string>
 
-using namespace std;
 
-class IOException : public runtime_error {
+class IOException : public std::runtime_error {
 public:
-    IOException(string const& msg) : runtime_error(msg) {}
+    IOException(std::string const& msg) : runtime_error(msg) {}
 };
 
 class FileNotFoundException : public IOException {
 public:
-    FileNotFoundException(string const& msg) : IOException(msg) {}
+    FileNotFoundException(std::string const& msg) : IOException(msg) {}
 };
 
-class ConfigurationException : public runtime_error {
+class DnsResolutionException : public IOException {
 public:
-    ConfigurationException(string const& msg) : runtime_error(msg) {}
+    DnsResolutionException(std::string const& msg) : IOException(msg) {}
 };
 
-class ServerException : public runtime_error {
+class ConfigurationException : public std::runtime_error {
 public:
-    ServerException(string const& msg) : runtime_error(msg) {}
+    ConfigurationException(std::string const& msg) : runtime_error(msg) {}
 };
 
-class ServerConfigurationException : public runtime_error {
+class ServerException : public std::runtime_error {
 public:
-    ServerConfigurationException(string const& msg) : runtime_error(msg) {}
+    ServerException(std::string const& msg) : runtime_error(msg) {}
 };
 
-class StorageException : public runtime_error {
+class ServerConfigurationException : public std::runtime_error {
 public:
-    StorageException(string const& msg) : runtime_error(msg) {}
+    ServerConfigurationException(std::string const& msg) : runtime_error(msg) {}
+};
+
+class StorageException : public std::runtime_error {
+public:
+    StorageException(std::string const& msg) : runtime_error(msg) {}
 };
 
 #endif  // KIWI_EXCEPTIONS_H_

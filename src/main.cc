@@ -1,6 +1,8 @@
 #include <iostream>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include "server.h"
 
 using namespace std;

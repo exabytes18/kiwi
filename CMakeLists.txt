@@ -16,7 +16,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 # compiler flags
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
-add_definitions(-Wall -Wextra -Wold-style-cast -pedantic -std=c++14)
+add_definitions(-Wall -Wextra -pedantic -std=c++14)
 
 # declare our executable
 add_executable(kiwidb ${SOURCES})
