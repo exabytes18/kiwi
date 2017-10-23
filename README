@@ -5,3 +5,27 @@ make -j VERBOSE=1
 # Building release:
 cmake . -DCMAKE_BUILD_TYPE=Release
 make -j
+
+
+
+Pipelining is paramount to high performance.
+
+Use structs for specifying DTOs.
+
+Thread architecture:
+
+    Pseudo-code:
+      while(true) {
+          readFromNetwork()
+          writeToRocksDB() // Only need to write to log, trigger asynchronous message delivery.
+          writeToNetwork()
+      }
+
+    Benefits:
+      - Reading/writing to socket happens on same thread (no contention on reads/writes)
+      - Benefit of cache locality between readFromNetwork() and writeToRocksDB()
+      - No need to signal network thread to write response after writeToRocksDB() (we can immediately do the write ourself).
+      - No need to synchronize between network thread and thread writing to rocksdb() (we can get away with fewer locks).
+
+    To test performance:
+      - Disable synchronous writes to rocksdb (or don't even write to rocksdb at all) and see if it speeds up replication.

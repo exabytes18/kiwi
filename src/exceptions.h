@@ -1,6 +1,7 @@
 #ifndef KIWI_EXCEPTIONS_H_
 #define KIWI_EXCEPTIONS_H_
 
+#include <stdexcept>
 #include <string>
 
 

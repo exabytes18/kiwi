@@ -31,6 +31,11 @@ find_package(yaml-cpp REQUIRED)
 include_directories(${YAML_CPP_INCLUDE_DIR})
 target_link_libraries(kiwidb ${YAML_CPP_LIBRARIES})
 
+# rocksdb
+find_package(rocksdb REQUIRED)
+include_directories(${ROCKSDB_INCLUDE_DIR})
+target_link_libraries(kiwidb ${ROCKSDB_LIBRARIES})
+
 # bz2 (needed for rocksdb)
 find_package(bz2 REQUIRED)
 target_link_libraries(kiwidb ${BZ2_LIBRARIES})
@@ -47,7 +52,11 @@ target_link_libraries(kiwidb ${SNAPPY_LIBRARIES})
 find_package(zlib REQUIRED)
 target_link_libraries(kiwidb ${ZLIB_LIBRARIES})
 
-# rocksdb
-find_package(rocksdb REQUIRED)
-include_directories(${ROCKSDB_INCLUDE_DIR})
-target_link_libraries(kiwidb ${ROCKSDB_LIBRARIES})
+# zstd (needed for rocksdb)
+find_package(zstd REQUIRED)
+target_link_libraries(kiwidb ${ZSTD_LIBRARIES})
+
+# libevent2
+find_package(libevent2 REQUIRED)
+include_directories(${LIBEVENT2_INCLUDE_DIR})
+target_link_libraries(kiwidb ${LIBEVENT2_LIBRARIES})

@@ -44,6 +44,8 @@ bind_address: 127.0.0.1:12312
 #
 hosts:
     1: 127.0.0.1:12312
+    2: 127.0.0.1:12313
+    3: 127.0.0.1:12314
 
 # Local directory to which data is stored.
 data_dir: data

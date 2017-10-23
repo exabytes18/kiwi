@@ -11,7 +11,7 @@ using namespace std;
 class ServerConfig {
 public:
     ServerConfig(string const& cluster_name, uint32_t server_id, SocketAddress const& bind_address, unordered_map<uint32_t, SocketAddress> const& hosts, string const& data_dir, bool use_ipv4, bool use_ipv6);
-    static ServerConfig ParseFromFile(char const * config_path);
+    static ServerConfig ParseFromFile(char const* config_path);
     string const& ClusterName(void) const;
     uint32_t ServerId(void) const;
     SocketAddress BindAddress(void) const;

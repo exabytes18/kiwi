@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <netdb.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -78,9 +79,9 @@ void IOUtils::SetNonBlocking(int fd) {
 }
 
 
-int IOUtils::OpenSocket(struct addrinfo *addrs) {
+int IOUtils::OpenSocket(struct addrinfo* addrs) {
     int fd;
-    struct addrinfo *addr;
+    struct addrinfo* addr;
     for (addr = addrs; addr != NULL; addr = addr->ai_next) {
         fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
         if (fd == -1) {
@@ -137,7 +138,7 @@ int IOUtils::ListenSocket(SocketAddress const& address, int listen_backlog, bool
     char bind_port_str[16];
     sprintf(bind_port_str, "%d", address.Port());
 
-    struct addrinfo *addrs;
+    struct addrinfo* addrs;
     int err = getaddrinfo(address.Address().c_str(), bind_port_str, &hints, &addrs);
     if (err != 0) {
         throw DnsResolutionException("getaddrinfo: " + std::string(gai_strerror(err)));

@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sstream>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>

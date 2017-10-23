@@ -1,0 +1,116 @@
+There are two separate transaction ids:
+    1.) raft transaction id
+    2.) table-local transaction id
+
+On startup:
+    roll forward the table columnfamilies until kiwi_db_metadata.raft_trx_id == max(raft_log.transaction_id)
+
+Whenever there's an update to the table columnfamilies, need to write to 4 tables:
+    kiwi_db_metadata
+    kiwi_db_next_trx_ids
+    kiwi_db_$DB_table_$TABLE_log
+    kiwi_db_$DB_table_$TABLE_data
+
+When cleaning table logs, need to do the following as one transaction:
+    Scan log and find first live transaction id to purge
+    Issue range deletion for everything before first live transaction id
+    Update kiwi_db_first_live_trx_ids and set value for table to first live transaction id
+
+
+
+
+---------------------
+
+
+
+
+Flow of data:
+    [thread 1] Read from network
+    [thread 1] Place string or char[] into some memory
+    [thread 1] Place string/char[] into queue
+    [thread 2] read string/char[] from queue
+    [thread 2] write to rocksdb
+
+
+
+
+
+---------------------
+
+
+raft_log:
+
+    key: [8 bytes for transaction id]
+    value: [transaction]
+
+    transaction: [4 bytes for number of batches][batches]*
+
+    batch: [4 bytes for number of databases][database]*
+
+    database: [8 bytes for database id][4 bytes for database_actions][database_actions]*
+
+    database_actions:
+        [1]: create_
+
+
+kiwi_db_metadata:
+    
+    key: [string]
+    value:
+        "raft_trx_id" -> [8 bytes for raft transaction id]
+
+
+kiwi_db_first_live_trx_ids:
+    
+    key: [8 bytes for database id][8 bytes for table id]
+    value: [8 bytes for first live transaction id]
+
+
+kiwi_db_next_trx_ids:
+    
+    key: [8 bytes for database id][8 bytes for table id]
+    value: [8 bytes for next transaction id]
+
+
+kiwi_db_intern_mapping:
+
+    key: [8 bytes for database id]
+    value: [string representing database name]
+
+
+kiwi_db_$DB_table_intern_mapping:
+
+    key: [8 bytes for table id]
+    value: [string representing table name]
+
+
+kiwi_db_$DB_table_$TABLE_log:
+
+    key: [8 bytes for table transaction id]
+    value: [row events]
+
+    NOTES:
+        We could implement a compaction filter, but updating retention policy could mean
+        that the compaction filter would leave the table in a partial state. Really, when
+        we want to clear the log, we want a total truncation.
+
+        We could also use range deletions, but iterating through the log could be painful
+        if we encounter a range tombstone.
+
+        Solution: use range deletions but ensure that our iterators start from a live key.
+
+            read_options.snapshot = db->GetSnapshot();
+            auto db_table = db + table;
+            auto first_live = db->Get(read_options, "kiwi_db_first_live_trx_ids", db_table)
+            auto iter = db->NewIterator(options);
+            iter.Seek(first_live);
+            while (iter.Valid()) {
+                // read
+                iter.Next();
+            }
+
+
+kiwi_db_$DB_table_$TABLE_data:
+
+    key: [user defined]
+    value: [user defined]

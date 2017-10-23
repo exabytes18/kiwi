@@ -40,6 +40,10 @@ Storage::Storage(ServerConfig const& server_config) {
 }
 
 
+void Deliver(uint64_t offset) {
+}
+
+
 Storage::~Storage(void) {
     delete db;
 }

@@ -67,7 +67,7 @@ int main(int argc, char * const argv[]) {
 
     try {
         return run(argv[1], termination_signals);
-    } catch (const exception& e) {
+    } catch (exception const& e) {
         cerr << "Problem running server: " << e.what() << endl;
         return 1;
     } catch (...) {

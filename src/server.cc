@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <iostream>
 #include <poll.h>
+#include <sstream>
 #include <unistd.h>
 #include "exceptions.h"
 #include "io_utils.h"
@@ -64,22 +65,15 @@ Server::~Server(void) {
         }
     }
 
-    IOUtils::ClosePipe(shutdown_pipe);
-}
-
-
-void * Server::AcceptorThreadWrapper(void * ptr) {
-    Server* server = static_cast<Server*>(ptr);
-    try {
-        server->AcceptorThreadMain();
-    } catch (const exception& e) {
-        cerr << "Acceptor thread crashed: " << e.what() << endl;
-        abort();
-    } catch (...) {
-        cerr << "Acceptor thread crashed" << endl;
-        abort();
+    if (dispatch_thread_created) {
+        int err = pthread_join(dispatch_thread, NULL);
+        if (err != 0) {
+            cerr << "Fatal: problem joining dispatch thread: " << strerror(err) << endl;
+            abort();
+        }
     }
-    return nullptr;
+
+    IOUtils::ClosePipe(shutdown_pipe);
 }
 
 
@@ -95,6 +89,43 @@ void Server::Start(void) {
     } else {
         throw ServerException("Error creating acceptor thread: " + string(strerror(errno)));
     }
+
+    err = pthread_create(&dispatch_thread, NULL, DispatchThreadWrapper, this);
+    if (err == 0) {
+        dispatch_thread_created = true;
+    } else {
+        throw ServerException("Error creating dispatch thread: " + string(strerror(errno)));
+    }
+}
+
+
+void* Server::AcceptorThreadWrapper(void* ptr) {
+    Server* server = static_cast<Server*>(ptr);
+    try {
+        server->AcceptorThreadMain();
+    } catch (exception const& e) {
+        cerr << "Acceptor thread crashed: " << e.what() << endl;
+        abort();
+    } catch (...) {
+        cerr << "Acceptor thread crashed" << endl;
+        abort();
+    }
+    return nullptr;
+}
+
+
+void* Server::DispatchThreadWrapper(void* ptr) {
+    Server* server = static_cast<Server*>(ptr);
+    try {
+        server->DispatchThreadMain();
+    } catch (exception const& e) {
+        cerr << "Dispatch thread crashed: " << e.what() << endl;
+        abort();
+    } catch (...) {
+        cerr << "Dispatch thread crashed" << endl;
+        abort();
+    }
+    return nullptr;
 }
 
 
@@ -172,12 +203,16 @@ void Server::AcceptorThreadMain(void) {
 }
 
 
+void Server::DispatchThreadMain(void) {
+}
+
+
 void Server::Shutdown(void) {
     IOUtils::ForceWriteByte(shutdown_pipe[1], 0);
 }
 
 
-void Server::IncomingConnection(int fd) {    
+void Server::IncomingConnection(int fd) {
 }
 
 
@@ -185,14 +220,42 @@ Server::ClusterNode::ClusterNode(uint32_t id, SocketAddress const& address, int 
         id(id),
         address(address),
         port(port),
-        server(server) {}
+        server(server),
+        thread_created(false) {}
 
 
-void Server::ClusterNode::Start(void) {
+void* Server::ClusterNode::ThreadWrapper(void* ptr) {
+    ClusterNode* cluster_node = static_cast<ClusterNode*>(ptr);
+    try {
+        cluster_node->ThreadMain();
+    } catch (exception const& e) {
+        cerr << "Cluster node thread crashed (id=" << cluster_node->id << "): " << e.what() << endl;
+        abort();
+    } catch (...) {
+        cerr << "Cluster node thread crashed (id=" << cluster_node->id << ")" << endl;
+        abort();
+    }
+    return nullptr;
 }
 
 
-void Server::ClusterNode::IncomingConnection(int fd) {
+void Server::ClusterNode::Start(void) {
+    int err = pthread_create(&thread, NULL, ThreadWrapper, this);
+    if (err == 0) {
+        thread_created = true;
+    } else {
+        stringstream ss;
+        ss << "Error creating cluster node thread (id=" << id << "): " << strerror(errno);
+        throw ServerException(ss.str());
+    }
+}
+
+
+void Server::ClusterNode::ThreadMain(void) {
+}
+
+
+void Server::ClusterNode::IncomingConnection(int protocol_version, int fd) {
 }
 
 
@@ -201,4 +264,11 @@ void Server::ClusterNode::Shutdown(void) {
 
 
 Server::ClusterNode::~ClusterNode(void) {
+    if (thread_created) {
+        int err = pthread_join(thread, NULL);
+        if (err != 0) {
+            cerr << "Fatal: problem joining cluster node thread (id=" << id << "): " << strerror(err) << endl;
+            abort();
+        }
+    }
 }

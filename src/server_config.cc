@@ -7,7 +7,7 @@
 
 
 template <class T>
-static T ParseValue(char const * config_path, string const& name, YAML::Node& value) {
+static T ParseValue(char const* config_path, string const& name, YAML::Node& value) {
     try {
         return value.as<T>();
     } catch (YAML::BadConversion& e) {
@@ -22,7 +22,7 @@ static T ParseValue(char const * config_path, string const& name, YAML::Node& va
 
 
 template <class T>
-static T ParseRequiredParameter(char const * config_path, YAML::Node const& yaml, string const& name) {
+static T ParseRequiredParameter(char const* config_path, YAML::Node const& yaml, string const& name) {
     auto value = yaml[name];
     if (value) {
         return ParseValue<T>(config_path, name, value);
@@ -35,7 +35,7 @@ static T ParseRequiredParameter(char const * config_path, YAML::Node const& yaml
 
 
 template <class T>
-static T ParseOptionalParameter(char const * config_path, YAML::Node const& yaml, string const& name, T defaultValue) {
+static T ParseOptionalParameter(char const* config_path, YAML::Node const& yaml, string const& name, T defaultValue) {
     auto value = yaml[name];
     if (value) {
         return ParseValue<T>(config_path, name, value);
@@ -45,7 +45,7 @@ static T ParseOptionalParameter(char const * config_path, YAML::Node const& yaml
 }
 
 
-static unordered_map<uint32_t, SocketAddress> ParseHostMap(char const * config_path, YAML::Node const& yaml, string const& name) {
+static unordered_map<uint32_t, SocketAddress> ParseHostMap(char const* config_path, YAML::Node const& yaml, string const& name) {
     auto hosts = yaml["hosts"];
     if (!hosts) {
         stringstream ss;
@@ -79,7 +79,7 @@ static unordered_map<uint32_t, SocketAddress> ParseHostMap(char const * config_p
 }
 
 
-ServerConfig ServerConfig::ParseFromFile(char const * config_path) {
+ServerConfig ServerConfig::ParseFromFile(char const* config_path) {
     auto contents = FileUtils::ReadFile(config_path);
     auto yaml = YAML::Load(contents);
 
