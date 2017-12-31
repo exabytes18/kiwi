@@ -1,4 +1,5 @@
 # Unique name to help ensure that only servers from the same cluster connect to each other.
+# Must be less than 64k characters, so please be terse. :)
 cluster_name: Yellow Kiwi
 
 # Each server within a cluster must be assigned a unique ID. Assigning duplicate IDs to

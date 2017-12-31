@@ -1,0 +1,17 @@
+Client-server architecture, request-response transaction based, with pipelining.
+
+Client initiates connections.
+Client sends preamble.
+
+All integer values are encoded using network byte order.
+
+Magic Number:     0xE6955EBF
+Protocol Version: 1
+
+
+Preamble:
+    [4 byte magic number]
+    [4 byte protocol version]
+    [2 byte indicating cluster name length]
+    [n bytes containing cluster name]
+    [4 bytes indicating server id]

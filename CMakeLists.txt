@@ -55,8 +55,3 @@ target_link_libraries(kiwidb ${ZLIB_LIBRARIES})
 # zstd (needed for rocksdb)
 find_package(zstd REQUIRED)
 target_link_libraries(kiwidb ${ZSTD_LIBRARIES})
-
-# libevent2
-find_package(libevent2 REQUIRED)
-include_directories(${LIBEVENT2_INCLUDE_DIR})
-target_link_libraries(kiwidb ${LIBEVENT2_LIBRARIES})

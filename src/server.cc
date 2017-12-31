@@ -37,14 +37,11 @@ Server::Server(ServerConfig const& server_config, Storage& storage) :
 
     } catch (...) {
         IOUtils::ClosePipe(shutdown_pipe);
-        try {
-            for (auto it = cluster_nodes.begin(); it != cluster_nodes.end(); ++it) {
-                auto cluster_node = it->second;
-                delete cluster_node;
-            }
-        } catch (...) {
-            // Do nothing
+        for (auto it = cluster_nodes.begin(); it != cluster_nodes.end(); ++it) {
+            auto cluster_node = it->second;
+            delete cluster_node;
         }
+
         throw;
     }
 }
@@ -153,7 +150,7 @@ void Server::AcceptorThreadMain(void) {
                 if (errno == EINTR || errno == EAGAIN) {
                     continue;
                 } else {
-                    throw IOException("Probleming polling acceptor fd: " + string(strerror(errno)));
+                    throw IOException("Problem polling acceptor fd: " + string(strerror(errno)));
                 }
             } else {
                 if ((fds[0].revents & POLLIN) != 0) {
@@ -213,6 +210,7 @@ void Server::Shutdown(void) {
 
 
 void Server::IncomingConnection(int fd) {
+    // we need to wait for 
 }
 
 

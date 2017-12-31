@@ -84,20 +84,25 @@ ServerConfig ServerConfig::ParseFromFile(char const* config_path) {
     auto yaml = YAML::Load(contents);
 
     auto cluster_name = ParseRequiredParameter<string>(config_path, yaml, "cluster_name");
+    if (cluster_name.length() > Constants::MAX_CLUSTER_NAME_LENGTH) {
+        stringstream ss;
+        ss << "The \"cluster_name\" configuration parameter must be <= " << Constants::MAX_CLUSTER_NAME_LENGTH << " bytes long.";
+        throw ConfigurationException(ss.str());
+    }
+
     auto server_id = ParseRequiredParameter<uint32_t>(config_path, yaml, "server_id");
-    auto bind_address = ParseRequiredParameter<string>(config_path, yaml, "bind_address");
     auto hosts = ParseHostMap(config_path, yaml, "hosts");
-    auto data_dir = ParseRequiredParameter<string>(config_path, yaml, "data_dir");
-    auto use_ipv4 = ParseOptionalParameter<bool>(config_path, yaml, "ipv4", false);
-    auto use_ipv6 = ParseOptionalParameter<bool>(config_path, yaml, "ipv6", false);
-
-    auto socket_address = SocketAddress::FromString(bind_address, Constants::DEFAULT_PORT);
-
     if (hosts.find(server_id) == hosts.end()) {
         stringstream ss;
         ss << "The \"hosts\" configuration parameter must contain an entry matching the \"server_id\" (\"" << server_id << "\").";
         throw ConfigurationException(ss.str());
     }
+    
+    auto data_dir = ParseRequiredParameter<string>(config_path, yaml, "data_dir");
+    auto use_ipv4 = ParseOptionalParameter<bool>(config_path, yaml, "ipv4", false);
+    auto use_ipv6 = ParseOptionalParameter<bool>(config_path, yaml, "ipv6", false);
+    auto bind_address = ParseRequiredParameter<string>(config_path, yaml, "bind_address");
+    auto socket_address = SocketAddress::FromString(bind_address, Constants::DEFAULT_PORT);
 
     return ServerConfig(cluster_name, server_id, socket_address, hosts, data_dir, use_ipv4, use_ipv6);
 }
