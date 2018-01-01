@@ -5,10 +5,6 @@ set (kiwi_VERSION_MAJOR 1)
 set (kiwi_VERSION_MINOR 0)
 
 file(GLOB SOURCES src/*.cc)
-configure_file (
-  "${PROJECT_SOURCE_DIR}/src/config.h.in"
-  "${PROJECT_SOURCE_DIR}/src/config.h"
-)
 
 include_directories("${PROJECT_SOURCE_DIR}/src")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
@@ -20,6 +16,14 @@ add_definitions(-Wall -Wextra -pedantic -std=c++14)
 
 # declare our executable
 add_executable(kiwidb ${SOURCES})
+
+# check for epoll or kqueue
+include(CheckSymbolExists)
+check_symbol_exists(epoll_create "sys/epoll.h" HAVE_EPOLL)
+check_symbol_exists(kqueue "sys/event.h" HAVE_KQUEUE)
+if (NOT HAVE_EPOLL AND NOT HAVE_KQUEUE)
+    message (FATAL_ERROR "You must have either epoll or kqueue")
+endif ()
 
 # pthreads
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
@@ -55,3 +59,8 @@ target_link_libraries(kiwidb ${ZLIB_LIBRARIES})
 # zstd (needed for rocksdb)
 find_package(zstd REQUIRED)
 target_link_libraries(kiwidb ${ZSTD_LIBRARIES})
+
+configure_file (
+  "${PROJECT_SOURCE_DIR}/src/config.h.in"
+  "${PROJECT_SOURCE_DIR}/src/config.h"
+)

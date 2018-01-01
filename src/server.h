@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <pthread.h>
 #include <string>
+#include "connection_state.h"
 #include "server_config.h"
 #include "storage.h"
 
@@ -12,46 +13,35 @@ using namespace std;
 
 class Server {
 public:
-    Server(ServerConfig const& server_config, Storage& storage);
+    Server(ServerConfig const& config, Storage& storage);
     ~Server(void);
-    void Start(void);
-    void Shutdown(void);
+    void HandleConnection(int fd, ConnectionState* connection_state);
 
     class ClusterNode {
     public:
-        ClusterNode(uint32_t id, SocketAddress const& address, int port, Server& server);
+        ClusterNode(Server& server, uint32_t id, SocketAddress const& address, int port);
         ~ClusterNode(void);
         void Start(void);
         void Shutdown(void);
 
     private:
+        Server& server;
         pthread_t thread;
         uint32_t id;
         SocketAddress address;
         int port;
-        Server& server;
         bool thread_created;
 
         static void* ThreadWrapper(void* ptr);
-        void ThreadMain();
+        void ThreadMain(void);
         void IncomingConnection(int protocol_version, int fd);
+        void SendRequest(int data);
     };
 
 private:
-    ServerConfig const& server_config;
-    int shutdown_pipe[2];
+    ServerConfig const& config;
     Storage& storage;
     unordered_map<uint32_t, ClusterNode*> cluster_nodes;
-    pthread_t acceptor_thread;
-    bool acceptor_thread_created;
-    pthread_t dispatch_thread;
-    bool dispatch_thread_created;
-
-    static void* AcceptorThreadWrapper(void* ptr);
-    void AcceptorThreadMain(void);
-    static void* DispatchThreadWrapper(void* ptr);
-    void DispatchThreadMain(void);
-    void IncomingConnection(int fd);
 };
 
 #endif  // KIWI_SERVER_H_

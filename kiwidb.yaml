@@ -3,7 +3,7 @@
 cluster_name: Yellow Kiwi
 
 # Each server within a cluster must be assigned a unique ID. Assigning duplicate IDs to
-# multiple servers will lead to undefined behavior, possibly up to and including data loss.
+# multiple servers will lead to undefined behavior and/or data loss.
 server_id: 1
 
 # For local testing, it's good practice to bind only to 127.0.0.1.

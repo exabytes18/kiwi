@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include "exceptions.h"
 #include "file_utils.h"
+#include "io_utils.h"
 
 #include <iostream>
 
@@ -34,12 +35,12 @@ string FileUtils::ReadFile(string const& path) {
             break;
         }
         if (num_read == -1) {
-            close(fd);
+            IOUtils::Close(fd);
             throw IOException("Error reading file: " + string(strerror(errno)));
         }
         ss.write(buf, num_read);
     }
 
-    close(fd);
+    IOUtils::Close(fd);
     return ss.str();
 }

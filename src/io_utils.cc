@@ -10,7 +10,7 @@
 #include "io_utils.h"
 
 
-void IOUtils::Close(int fd) {
+void IOUtils::Close(int fd) noexcept {
     // It's not necessarily safe to call close() a second time if the first
     // call returned an error, as operating systems are permitted to handle
     // this as they see fit.
@@ -23,13 +23,7 @@ void IOUtils::Close(int fd) {
 }
 
 
-void IOUtils::ClosePipe(int pipe[2]) {
-    Close(pipe[0]);
-    Close(pipe[1]);
-}
-
-
-void IOUtils::ForceWriteByte(int fd, char c) {
+void IOUtils::ForceWriteByte(int fd, char c) noexcept {
     char buf[1] = {c};
     for (;;) {
         ssize_t bytes_written = write(fd, buf, 1);
@@ -44,7 +38,8 @@ void IOUtils::ForceWriteByte(int fd, char c) {
                 if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
                     continue;
                 } else {
-                    throw IOException("Failed to write byte: " + std::string(strerror(errno)));
+                    std::cerr << "Failed to write byte: " << strerror(errno) << std::endl;
+                    abort();
                 }
 
             default:
@@ -82,7 +77,7 @@ void IOUtils::SetNonBlocking(int fd) {
 int IOUtils::OpenSocket(struct addrinfo* addrs) {
     int fd;
     struct addrinfo* addr;
-    for (addr = addrs; addr != NULL; addr = addr->ai_next) {
+    for (addr = addrs; addr != nullptr; addr = addr->ai_next) {
         fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
         if (fd == -1) {
             continue;
@@ -101,7 +96,7 @@ int IOUtils::OpenSocket(struct addrinfo* addrs) {
         Close(fd);
     }
 
-    if (addr == NULL) {
+    if (addr == nullptr) {
         throw IOException("Unable to bind socket");
     }
 

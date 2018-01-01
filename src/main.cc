@@ -3,18 +3,20 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include "connection_listener.h"
+#include "connection_dispatcher.h"
 #include "server.h"
 
 using namespace std;
 
 
-static void print_usage(int argc, char * const argv[]) {
+static void PrintUsage(int argc, char * const argv[]) {
     const char * program_name = (argc > 0) ? (argv[0]) : ("(unknown)");
     cerr << "usage: " << program_name << " config_file_path" << endl;
 }
 
 
-static int run(const char * config_file_path, const sigset_t termination_signals) {
+static int Run(const char * config_file_path, const sigset_t termination_signals) {
     // Read the configuration file
     ServerConfig server_config = ServerConfig::ParseFromFile(config_file_path);
 
@@ -23,7 +25,8 @@ static int run(const char * config_file_path, const sigset_t termination_signals
 
     // Start the server
     Server server(server_config, storage);
-    server.Start();
+    ConnectionDispatcher connection_dispatcher(server);
+    ConnectionListener connection_listener(server_config, connection_dispatcher);
 
     // Wait for termination signal
     int termination_signal;
@@ -34,7 +37,6 @@ static int run(const char * config_file_path, const sigset_t termination_signals
     }
 
     // Bye
-    server.Shutdown();
     return 0;
 }
 
@@ -54,19 +56,19 @@ int main(int argc, char * const argv[]) {
      * We rely upon this expectation so that we can then deliver the signals in a
      * controlled manner within the main thread.
      */
-    int err = pthread_sigmask(SIG_BLOCK, &termination_signals, NULL);
+    int err = pthread_sigmask(SIG_BLOCK, &termination_signals, nullptr);
     if (err != 0) {
         cerr << "Problem blocking signals: " << strerror(err) << endl;
         return 1;
     }
 
     if (argc != 2) {
-        print_usage(argc, argv);
+        PrintUsage(argc, argv);
         return 1;
     }
 
     try {
-        return run(argv[1], termination_signals);
+        return Run(argv[1], termination_signals);
     } catch (exception const& e) {
         cerr << "Problem running server: " << e.what() << endl;
         return 1;

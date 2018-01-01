@@ -1,6 +1,7 @@
 #include "socket_address.h"
 #include "string_utils.h"
 
+
 SocketAddress SocketAddress::FromString(std::string const& input, int defaultPort) {
     auto colon_idx = input.find(":");
     if (colon_idx == std::string::npos) {

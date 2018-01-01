@@ -25,6 +25,11 @@ public:
     ConfigurationException(std::string const& msg) : runtime_error(msg) {}
 };
 
+class EventLoopException : public IOException {
+public:
+    EventLoopException(std::string const& msg) : IOException(msg) {}
+};
+
 class ServerException : public std::runtime_error {
 public:
     ServerException(std::string const& msg) : runtime_error(msg) {}
