@@ -14,6 +14,10 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
 add_definitions(-Wall -Wextra -pedantic -std=c++14)
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "release" CACHE STRING "Choose the type of build, options are: debug release" FORCE)
+endif(NOT CMAKE_BUILD_TYPE)
+
 # declare our executable
 add_executable(kiwidb ${SOURCES})
 
