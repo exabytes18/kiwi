@@ -50,7 +50,7 @@ int main(int argc, char * const argv[]) {
     /*
      * Block termination signals
      * 
-     * Note: all threads inherit this sigmask. It's critical that threads do not
+     * Note: all threads inherit this sigmask. It's imperative that threads do not
      * modify their sigmask from this inherited version; this ensures that the
      * termination signals are properly blocked and not delivered to random threads.
      * We rely upon this expectation so that we can then deliver the signals in a

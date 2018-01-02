@@ -35,6 +35,7 @@ ConnectionDispatcher::ConnectionDispatcher(Server& server) :
 
 
 ConnectionDispatcher::~ConnectionDispatcher(void) {
+    IOUtils::ForceWriteByte(shutdown_pipe[1], 0);
     int err = pthread_join(dispatch_thread, nullptr);
     if (err != 0) {
         cerr << "Fatal: problem joining dispatch thread: " << strerror(err) << endl;
