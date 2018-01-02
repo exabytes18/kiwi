@@ -42,6 +42,8 @@ ConnectionDispatcher::~ConnectionDispatcher(void) {
         abort();
     }
 
+    // TODO: Close all fd that remain in watched_connections set
+
     IOUtils::Close(shutdown_pipe[0]);
     IOUtils::Close(shutdown_pipe[1]);
 }
