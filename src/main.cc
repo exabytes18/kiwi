@@ -3,8 +3,8 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "connection_listener.h"
 #include "connection_dispatcher.h"
+#include "connection_listener.h"
 #include "server.h"
 
 using namespace std;
@@ -18,15 +18,15 @@ static void PrintUsage(int argc, char * const argv[]) {
 
 static int Run(const char * config_file_path, const sigset_t termination_signals) {
     // Read the configuration file
-    ServerConfig server_config = ServerConfig::ParseFromFile(config_file_path);
+    ServerConfig config = ServerConfig::ParseFromFile(config_file_path);
 
     // Initialize the storage
-    Storage storage(server_config);
+    Storage storage(config);
 
     // Start the server
-    Server server(server_config, storage);
+    Server server(config, storage);
     ConnectionDispatcher connection_dispatcher(server);
-    ConnectionListener connection_listener(server_config, connection_dispatcher);
+    ConnectionListener connection_listener(config, connection_dispatcher);
 
     // Wait for termination signal
     int termination_signal;

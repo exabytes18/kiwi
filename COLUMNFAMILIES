@@ -14,7 +14,7 @@ Whenever there's an update to the table columnfamilies, need to write to 4 table
 When cleaning table logs, need to do the following as one transaction:
     Scan log and find first live transaction id to purge
     Issue range deletion for everything before first live transaction id
-    Update kiwi_db_first_live_trx_ids and set value for table to first live transaction id
+    Update kiwi_db_oldest_live_trx_ids and set value for table to first live transaction id
 
 
 
@@ -22,20 +22,6 @@ When cleaning table logs, need to do the following as one transaction:
 ---------------------
 
 
-
-
-Flow of data:
-    [thread 1] Read from network
-    [thread 1] Place string or char[] into some memory
-    [thread 1] Place string/char[] into queue
-    [thread 2] read string/char[] from queue
-    [thread 2] write to rocksdb
-
-
-
-
-
----------------------
 
 
 raft_log:
@@ -60,7 +46,7 @@ kiwi_db_metadata:
         "raft_trx_id" -> [8 bytes for raft transaction id]
 
 
-kiwi_db_first_live_trx_ids:
+kiwi_db_oldest_live_trx_ids:
     
     key: [8 bytes for database id][8 bytes for table id]
     value: [8 bytes for first live transaction id]
@@ -101,7 +87,7 @@ kiwi_db_$DB_table_$TABLE_log:
 
             read_options.snapshot = db->GetSnapshot();
             auto db_table = db + table;
-            auto first_live = db->Get(read_options, "kiwi_db_first_live_trx_ids", db_table)
+            auto first_live = db->Get(read_options, "kiwi_db_oldest_live_trx_ids", db_table)
             auto iter = db->NewIterator(options);
             iter.Seek(first_live);
             while (iter.Valid()) {

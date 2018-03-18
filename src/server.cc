@@ -1,6 +1,9 @@
 #include <iostream>
 #include <sstream>
+#include <unistd.h>
 #include "exceptions.h"
+#include "lock_guard.h"
+#include "io_utils.h"
 #include "server.h"
 
 
@@ -13,8 +16,8 @@ Server::Server(ServerConfig const& config, Storage& storage) :
         auto hosts = config.Hosts();
         for (auto it = hosts.begin(); it != hosts.end(); ++it) {
             auto id = it->first;
-            auto host = it->second;
-            auto cluster_node = new ClusterNode(*this, id, host, 1);
+            auto address = it->second;
+            auto cluster_node = new ClusterNode(*this, id, address);
             try {
                 cluster_nodes[id] = cluster_node;
             } catch (...) {
@@ -45,16 +48,31 @@ Server::~Server(void) {
 }
 
 
-void Server::HandleConnection(int fd, ConnectionState* connection_state) {
+void Server::HandleIncomingClientConnection(int fd) {
 }
 
 
-Server::ClusterNode::ClusterNode(Server& server, uint32_t id, SocketAddress const& address, int port) :
+void Server::HandleIncomingClusterNodeConnection(int fd) {
+}
+
+
+Server::ClusterNode::ClusterNode(Server& server, uint32_t id, SocketAddress const& address) :
         server(server),
         id(id),
         address(address),
-        port(port),
         thread_created(false) {}
+
+
+void Server::ClusterNode::Start(void) {
+    int err = pthread_create(&thread, nullptr, ThreadWrapper, this);
+    if (err == 0) {
+        thread_created = true;
+    } else {
+        stringstream ss;
+        ss << "Error creating cluster node thread (id=" << id << "): " << strerror(err);
+        throw ServerException(ss.str());
+    }
+}
 
 
 void* Server::ClusterNode::ThreadWrapper(void* ptr) {
@@ -69,18 +87,6 @@ void* Server::ClusterNode::ThreadWrapper(void* ptr) {
         abort();
     }
     return nullptr;
-}
-
-
-void Server::ClusterNode::Start(void) {
-    int err = pthread_create(&thread, nullptr, ThreadWrapper, this);
-    if (err == 0) {
-        thread_created = true;
-    } else {
-        stringstream ss;
-        ss << "Error creating cluster node thread (id=" << id << "): " << strerror(err);
-        throw ServerException(ss.str());
-    }
 }
 
 

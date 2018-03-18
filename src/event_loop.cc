@@ -28,7 +28,8 @@ using namespace std;
     void EventLoop::Remove(int fd) {
     }
 
-    EventLoop::Notification EventLoop::Poll() {
+
+    EventLoop::Notification EventLoop::GetReadyFD() {
         return EventLoop::Notification(0, 0);
     }
 
@@ -72,10 +73,32 @@ using namespace std;
     }
 
 
+    /*
+     * Need to be careful. When you close a file descriptor, it will
+     * automatically get removed from any kqueues to which it was registered.
+     * If you subsequently try to remove it after it was closed, then you'll
+     * get an error.
+     */
     void EventLoop::Remove(int fd) {
+        struct kevent event;
+        EV_SET(&event, fd, EVFILT_READ, EV_DELETE, 0, 0, nullptr);
+
+        int err = kevent(kq, &event, 1, nullptr, 0, nullptr);
+        if (err == -1) {
+            stringstream ss;
+            ss << "Error removing event from kqueue: " << strerror(errno);
+            throw EventLoopException(ss.str());
+        }
+
+        if (event.flags & EV_ERROR) {
+            stringstream ss;
+            ss << "Error removing event from kqueue: " << strerror(event.data);
+            throw EventLoopException(ss.str());
+        }
     }
 
-    EventLoop::Notification EventLoop::Poll() {
+
+    EventLoop::Notification EventLoop::GetReadyFD() {
         for (;;) {
             struct kevent tevent;
             int num_events = kevent(kq, nullptr, 0, &tevent, 1, nullptr);
@@ -84,8 +107,7 @@ using namespace std;
                 ss << "kevent(): " << strerror(errno);
                 throw EventLoopException(ss.str());
             } else if (num_events > 0) {
-                int fd = tevent.ident;
-                return EventLoop::Notification(tevent.ident, 0);
+                return EventLoop::Notification(tevent.ident, tevent.flags, tevent.udata);
             }
         }
     }
@@ -101,4 +123,9 @@ int EventLoop::Notification::GetFD() const {
 
 int EventLoop::Notification::GetEvents() const {
     return events;
+}
+
+
+void* EventLoop::Notification::GetData() const {
+    return data;
 }

@@ -10,9 +10,9 @@ public:
     IOException(std::string const& msg) : runtime_error(msg) {}
 };
 
-class FileNotFoundException : public IOException {
+class ConnectionClosedException : public IOException {
 public:
-    FileNotFoundException(std::string const& msg) : IOException(msg) {}
+    ConnectionClosedException(std::string const& msg) : IOException(msg) {}
 };
 
 class DnsResolutionException : public IOException {
@@ -20,14 +20,19 @@ public:
     DnsResolutionException(std::string const& msg) : IOException(msg) {}
 };
 
-class ConfigurationException : public std::runtime_error {
-public:
-    ConfigurationException(std::string const& msg) : runtime_error(msg) {}
-};
-
 class EventLoopException : public IOException {
 public:
     EventLoopException(std::string const& msg) : IOException(msg) {}
+};
+
+class FileNotFoundException : public IOException {
+public:
+    FileNotFoundException(std::string const& msg) : IOException(msg) {}
+};
+
+class ConfigurationException : public std::runtime_error {
+public:
+    ConfigurationException(std::string const& msg) : runtime_error(msg) {}
 };
 
 class ServerException : public std::runtime_error {

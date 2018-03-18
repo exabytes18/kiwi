@@ -23,17 +23,19 @@ public:
 
     class Notification {
     public:
-        Notification(int fd, int events) : fd(fd), events(events) {}
+        Notification(int fd, int events, void* data) : fd(fd), events(events), data(data) {}
         Notification(const Notification& mE)            = default;
         Notification(Notification&& mE)                 = default;
         Notification& operator=(const Notification& mE) = default;
         Notification& operator=(Notification&& mE)      = default;
         int GetFD() const;
         int GetEvents() const;
+        void* GetData() const;
 
     private:
         int fd;
         int events;
+        void* data;
     };
 
     EventLoop(void);
@@ -41,7 +43,7 @@ public:
     void Add(int fd, int filter, void* data);
     void Update(int fd, int filter, void* data);
     void Remove(int fd);
-    Notification Poll();
+    Notification GetReadyFD();
 
 
 private:

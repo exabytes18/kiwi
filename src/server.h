@@ -3,8 +3,10 @@
 
 #include <cstdint>
 #include <pthread.h>
+#include <set>
 #include <string>
-#include "connection_state.h"
+#include "event_loop.h"
+#include "mutex.h"
 #include "server_config.h"
 #include "storage.h"
 
@@ -15,11 +17,12 @@ class Server {
 public:
     Server(ServerConfig const& config, Storage& storage);
     ~Server(void);
-    void HandleConnection(int fd, ConnectionState* connection_state);
+    void HandleIncomingClientConnection(int fd);
+    void HandleIncomingClusterNodeConnection(int fd);
 
     class ClusterNode {
     public:
-        ClusterNode(Server& server, uint32_t id, SocketAddress const& address, int port);
+        ClusterNode(Server& server, uint32_t id, SocketAddress const& address);
         ~ClusterNode(void);
         void Start(void);
         void Shutdown(void);
@@ -29,7 +32,6 @@ public:
         pthread_t thread;
         uint32_t id;
         SocketAddress address;
-        int port;
         bool thread_created;
 
         static void* ThreadWrapper(void* ptr);

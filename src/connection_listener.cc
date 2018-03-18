@@ -2,6 +2,7 @@
 #include <iostream>
 #include <poll.h>
 #include <unistd.h>
+#include "buffered_network_connection.h"
 #include "connection_listener.h"
 #include "exceptions.h"
 #include "io_utils.h"
@@ -50,10 +51,10 @@ void* ConnectionListener::AcceptorThreadWrapper(void* ptr) {
     try {
         connection_listener->AcceptorThreadMain();
     } catch (exception const& e) {
-        cerr << "Acceptor thread crashed: " << e.what() << endl;
+        cerr << "Connection acceptor thread crashed: " << e.what() << endl;
         abort();
     } catch (...) {
-        cerr << "Acceptor thread crashed" << endl;
+        cerr << "Connection acceptor thread crashed" << endl;
         abort();
     }
     return nullptr;
@@ -109,16 +110,25 @@ void ConnectionListener::AcceptorThreadMain(void) {
                                 break;
                             }
                         } else {
-                            /* make the connection nonblocking */
                             try {
                                 IOUtils::SetNonBlocking(fd);
                             } catch (...) {
-                                cerr << "Problem setting accepted connection to be nonblocking: " << strerror(errno) << endl;
                                 IOUtils::Close(fd);
-                                break;
+                                throw;
                             }
 
-                            connection_dispatcher.HandleConnection(fd);
+                            BufferedNetworkConnection* buffered_network_connection;
+                            try {
+                                buffered_network_connection = new BufferedNetworkConnection(fd);
+                            } catch (...) {
+                                IOUtils::Close(fd);
+                            }
+
+                            try {
+                                connection_dispatcher.HandleIncomingConnection(buffered_network_connection);
+                            } catch (...) {
+                                delete buffered_network_connection;
+                            }
                         }
                     }
 
