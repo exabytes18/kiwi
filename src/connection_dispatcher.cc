@@ -10,8 +10,8 @@
 ConnectionDispatcher::ConnectionDispatcher(Server& server) :
         server(server),
         event_loop(),
-        watched_connections_mutex(),
-        watched_connections() {
+        managed_connections_mutex(),
+        managed_connections() {
 
     if (pipe(shutdown_pipe) != 0) {
         throw ServerException("Error creating shutdown pipe: " + string(strerror(errno)));
@@ -43,8 +43,8 @@ ConnectionDispatcher::~ConnectionDispatcher(void) {
         abort();
     }
 
-    // Close any connections that still remain in our watched_connections set.
-    for (auto connection : watched_connections) {
+    // Close any connections that still remain in our managed_connections set.
+    for (auto connection : managed_connections) {
         delete connection;
     }
 
@@ -68,6 +68,17 @@ void* ConnectionDispatcher::DispatchThreadWrapper(void* ptr) {
 }
 
 
+void ConnectionDispatcher::CloseAndDeregisterConnection(ConnectionContext* ctx) {
+    BufferedNetworkConnection* connection = ctx->GetBufferedNetworkConnection();
+
+    // Remove fd from event loop, then close the fd (so kqueue is happy). Inverting the order will trigger an error.
+    event_loop.Remove(connection->GetFD());
+    DeregisterConnection(connection);
+    delete connection;
+    delete ctx;
+}
+
+
 void ConnectionDispatcher::DispatchThreadMain(void) {
     for (;;) {
         EventLoop::Notification notification = event_loop.GetReadyFD();
@@ -87,53 +98,60 @@ void ConnectionDispatcher::DispatchThreadMain(void) {
                 ctx->WriteToSocket();
             }
         } catch (ConnectionClosedException const& e) {
-            // Remove fd from event loop, then close the fd (so kqueue is happy). Inverting the order will trigger an error.
-            event_loop.Remove(fd);
-
-            BufferedNetworkConnection* buffered_network_connection = ctx->GetBufferedNetworkConnection();
-            DeregisterConnection(buffered_network_connection);
-            delete buffered_network_connection;
-            delete ctx;
+            CloseAndDeregisterConnection(ctx);
+        } catch (...) {
+            CloseAndDeregisterConnection(ctx);
+            throw;
         }
     }
 }
 
 
-void ConnectionDispatcher::HandleIncomingConnection(BufferedNetworkConnection* buffered_network_connection) {
-    RegisterConnection(buffered_network_connection);
+void ConnectionDispatcher::HandleIncomingConnection(BufferedNetworkConnection* connection) {
+    RegisterConnection(connection);
     try {
-        ConnectionContext* ctx = new ConnectionContext(*this, buffered_network_connection);
+        ConnectionContext* ctx = new ConnectionContext(*this, connection);
         try {
-            event_loop.Add(buffered_network_connection->GetFD(), EventLoop::EVENT_READ, ctx);
+            event_loop.Add(connection->GetFD(), EventLoop::EVENT_READ, ctx);
         } catch (...) {
             delete ctx;
             throw;
         }
 
     } catch (...) {
-        DeregisterConnection(buffered_network_connection);
+        DeregisterConnection(connection);
         throw;
     }
 }
 
 
-void ConnectionDispatcher::RegisterConnection(BufferedNetworkConnection* buffered_network_connection) {
-    LockGuard lock_guard(watched_connections_mutex);
-    watched_connections.insert(buffered_network_connection);
+void ConnectionDispatcher::RegisterConnection(BufferedNetworkConnection* connection) {
+    LockGuard lock_guard(managed_connections_mutex);
+    managed_connections.insert(connection);
 }
 
 
-void ConnectionDispatcher::DeregisterConnection(BufferedNetworkConnection* buffered_network_connection) {
-    LockGuard lock_guard(watched_connections_mutex);
-    watched_connections.erase(buffered_network_connection);
+void ConnectionDispatcher::DeregisterConnection(BufferedNetworkConnection* connection) {
+    LockGuard lock_guard(managed_connections_mutex);
+    managed_connections.erase(connection);
+}
+
+
+void ConnectionDispatcher::DispatchClientConnection(BufferedNetworkConnection* connection) {
+    server.HandleIncomingClientConnection(connection);
+}
+
+
+void ConnectionDispatcher::DispatchClusterNodeConnection(BufferedNetworkConnection* connection) {
+    server.HandleIncomingClusterNodeConnection(connection);
 }
 
 
 ConnectionDispatcher::ConnectionContext::ConnectionContext(
     ConnectionDispatcher& connection_dispatcher,
-    BufferedNetworkConnection* buffered_network_connection) :
+    BufferedNetworkConnection* connection) :
         connection_dispatcher(connection_dispatcher),
-        buffered_network_connection(buffered_network_connection),
+        connection(connection),
         read_state(ReadState::READING_FIRST_REQUEST_MESSAGE_TYPE),
         first_request_message_type_buffer(4),
         magic_number_buffer(4),
@@ -151,7 +169,7 @@ ConnectionDispatcher::ConnectionContext::~ConnectionContext(void) {
 
 
 BufferedNetworkConnection* ConnectionDispatcher::ConnectionContext::GetBufferedNetworkConnection(void) {
-    return buffered_network_connection;
+    return connection;
 }
 
 
@@ -159,7 +177,7 @@ void ConnectionDispatcher::ConnectionContext::ReadFromSocketAndProcessData(void)
     for (;;) {
         switch (read_state) {
             case ReadState::READING_FIRST_REQUEST_MESSAGE_TYPE:
-                if (buffered_network_connection->Fill(&first_request_message_type_buffer)) {
+                if (connection->Fill(&first_request_message_type_buffer)) {
                     first_request_message_type_buffer.Flip();
                     first_request_message_type_int = first_request_message_type_buffer.UnsafeGetInt();
                     switch (first_request_message_type_int) {
@@ -184,7 +202,7 @@ void ConnectionDispatcher::ConnectionContext::ReadFromSocketAndProcessData(void)
                 break;
 
             case ReadState::READING_CLIENT_HELLO_MAGIC_NUMBER:
-                if (buffered_network_connection->Fill(&magic_number_buffer)) {
+                if (connection->Fill(&magic_number_buffer)) {
                     magic_number_buffer.Flip();
                     magic_number = magic_number_buffer.UnsafeGetInt();
                     if (magic_number == Protocol::MAGIC_NUMBER) {
@@ -199,10 +217,11 @@ void ConnectionDispatcher::ConnectionContext::ReadFromSocketAndProcessData(void)
                 break;
 
             case ReadState::READING_CLIENT_HELLO_PROTOCOL_VERSION:
-                if (buffered_network_connection->Fill(&protocol_version_buffer)) {
+                if (connection->Fill(&protocol_version_buffer)) {
                     protocol_version_buffer.Flip();
                     protocol_version = protocol_version_buffer.UnsafeGetInt();
                     if (protocol_version == Protocol::PROTOCOL_VERSION) {
+                        connection_dispatcher.DispatchClientConnection(connection);
                         read_state = ReadState::TERMINAL;
                     } else {
                         // TODO: send Error Reply (Unsupported Protocol Version)
@@ -214,7 +233,7 @@ void ConnectionDispatcher::ConnectionContext::ReadFromSocketAndProcessData(void)
                 break;
 
             case ReadState::READING_SERVER_HELLO_MAGIC_NUMBER:
-                if (buffered_network_connection->Fill(&magic_number_buffer)) {
+                if (connection->Fill(&magic_number_buffer)) {
                     magic_number_buffer.Flip();
                     magic_number = magic_number_buffer.UnsafeGetInt();
                     if (magic_number == Protocol::MAGIC_NUMBER) {
@@ -229,7 +248,7 @@ void ConnectionDispatcher::ConnectionContext::ReadFromSocketAndProcessData(void)
                 break;
 
             case ReadState::READING_SERVER_HELLO_PROTOCOL_VERSION:
-                if (buffered_network_connection->Fill(&protocol_version_buffer)) {
+                if (connection->Fill(&protocol_version_buffer)) {
                     protocol_version_buffer.Flip();
                     protocol_version = protocol_version_buffer.UnsafeGetInt();
                     if (protocol_version == Protocol::PROTOCOL_VERSION) {
@@ -244,7 +263,7 @@ void ConnectionDispatcher::ConnectionContext::ReadFromSocketAndProcessData(void)
                 break;
 
             case ReadState::READING_SERVER_HELLO_SERVER_ID:
-                if (buffered_network_connection->Fill(&server_id_buffer)) {
+                if (connection->Fill(&server_id_buffer)) {
                     server_id_buffer.Flip();
                     server_id = server_id_buffer.UnsafeGetInt();
                     read_state = ReadState::READING_SERVER_HELLO_CLUSTER_NAME_LENGTH;
@@ -254,7 +273,7 @@ void ConnectionDispatcher::ConnectionContext::ReadFromSocketAndProcessData(void)
                 break;
 
             case ReadState::READING_SERVER_HELLO_CLUSTER_NAME_LENGTH:
-                if (buffered_network_connection->Fill(&cluster_name_length_buffer)) {
+                if (connection->Fill(&cluster_name_length_buffer)) {
                     cluster_name_length_buffer.Flip();
                     cluster_name_length = cluster_name_length_buffer.UnsafeGetShort();
                     cluster_name_buffer = new Buffer(cluster_name_length);
@@ -265,9 +284,10 @@ void ConnectionDispatcher::ConnectionContext::ReadFromSocketAndProcessData(void)
                 break;
 
             case ReadState::READING_SERVER_HELLO_CLUSTER_NAME:
-                if (buffered_network_connection->Fill(cluster_name_buffer)) {
+                if (connection->Fill(cluster_name_buffer)) {
                     cluster_name_buffer->Flip();
                     cluster_name = cluster_name_buffer->UnsafeGetString(cluster_name_length);
+                    connection_dispatcher.DispatchClusterNodeConnection(connection);
                     read_state = ReadState::TERMINAL;
                 } else {
                     return;

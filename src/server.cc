@@ -48,11 +48,11 @@ Server::~Server(void) {
 }
 
 
-void Server::HandleIncomingClientConnection(int fd) {
+void Server::HandleIncomingClientConnection(BufferedNetworkConnection* buffered_network_connection) {
 }
 
 
-void Server::HandleIncomingClusterNodeConnection(int fd) {
+void Server::HandleIncomingClusterNodeConnection(BufferedNetworkConnection* buffered_network_connection) {
 }
 
 

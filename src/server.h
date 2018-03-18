@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <set>
 #include <string>
+#include "buffered_network_connection.h"
 #include "event_loop.h"
 #include "mutex.h"
 #include "server_config.h"
@@ -17,8 +18,8 @@ class Server {
 public:
     Server(ServerConfig const& config, Storage& storage);
     ~Server(void);
-    void HandleIncomingClientConnection(int fd);
-    void HandleIncomingClusterNodeConnection(int fd);
+    void HandleIncomingClientConnection(BufferedNetworkConnection* buffered_network_connection);
+    void HandleIncomingClusterNodeConnection(BufferedNetworkConnection* buffered_network_connection);
 
     class ClusterNode {
     public:

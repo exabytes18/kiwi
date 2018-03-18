@@ -40,8 +40,8 @@ public:
 
     private:
         ConnectionDispatcher& connection_dispatcher;
-        BufferedNetworkConnection* buffered_network_connection;
-    
+        BufferedNetworkConnection* connection;
+
         ReadState read_state;
 
         Buffer first_request_message_type_buffer;
@@ -70,13 +70,17 @@ private:
     int shutdown_pipe[2];
     pthread_t dispatch_thread;
 
-    Mutex watched_connections_mutex;
-    set<BufferedNetworkConnection*> watched_connections;
+    Mutex managed_connections_mutex;
+    set<BufferedNetworkConnection*> managed_connections;
 
     static void* DispatchThreadWrapper(void* ptr);
     void DispatchThreadMain(void);
     void RegisterConnection(BufferedNetworkConnection* buffered_network_connection);
     void DeregisterConnection(BufferedNetworkConnection* buffered_network_connection);
+
+    void CloseAndDeregisterConnection(ConnectionContext* ctx);
+    void DispatchClientConnection(BufferedNetworkConnection* buffered_network_connection);
+    void DispatchClusterNodeConnection(BufferedNetworkConnection* buffered_network_connection);
 };
 
 #endif  // KIWI_CONNECTION_DISPATCHER_H_
