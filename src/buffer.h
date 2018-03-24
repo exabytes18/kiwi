@@ -15,6 +15,7 @@ public:
     size_t Limit(void);
     void Limit(size_t limit);
     size_t Capacity(void);
+    void ResetAndGrow(size_t new_capacity);
     char* Data();
 
     size_t Remaining(void);

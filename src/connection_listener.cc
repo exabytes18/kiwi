@@ -110,25 +110,15 @@ void ConnectionListener::AcceptorThreadMain(void) {
                                 break;
                             }
                         } else {
+                            unique_ptr<BufferedNetworkConnection> buffered_network_connection;
                             try {
-                                IOUtils::SetNonBlocking(fd);
+                                buffered_network_connection = make_unique<BufferedNetworkConnection>(fd);
                             } catch (...) {
                                 IOUtils::Close(fd);
                                 throw;
                             }
 
-                            BufferedNetworkConnection* buffered_network_connection;
-                            try {
-                                buffered_network_connection = new BufferedNetworkConnection(fd);
-                            } catch (...) {
-                                IOUtils::Close(fd);
-                            }
-
-                            try {
-                                connection_dispatcher.HandleIncomingConnection(buffered_network_connection);
-                            } catch (...) {
-                                delete buffered_network_connection;
-                            }
+                            connection_dispatcher.HandleIncomingConnection(move(buffered_network_connection));
                         }
                     }
 

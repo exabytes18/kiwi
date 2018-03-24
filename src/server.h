@@ -18,8 +18,8 @@ class Server {
 public:
     Server(ServerConfig const& config, Storage& storage);
     ~Server(void);
-    void HandleIncomingClientConnection(BufferedNetworkConnection* buffered_network_connection);
-    void HandleIncomingClusterNodeConnection(BufferedNetworkConnection* buffered_network_connection);
+    void HandleIncomingClientConnection(unique_ptr<BufferedNetworkConnection> connection);
+    void HandleIncomingClusterNodeConnection(unique_ptr<BufferedNetworkConnection> connection);
 
     class ClusterNode {
     public:

@@ -40,6 +40,17 @@ size_t Buffer::Capacity(void) {
 }
 
 
+void Buffer::ResetAndGrow(size_t new_capacity) {
+    delete data;
+    data = nullptr;
+
+    data = new char[new_capacity];
+    capacity = new_capacity;
+    position = 0;
+    limit = new_capacity;
+}
+
+
 char* Buffer::Data(void) {
     return data;
 }
