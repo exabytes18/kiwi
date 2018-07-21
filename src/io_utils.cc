@@ -74,6 +74,36 @@ void IOUtils::SetNonBlocking(int fd) {
 }
 
 
+static int BindSocket(struct addrinfo* addrs) {
+    int fd;
+    struct addrinfo* addr;
+    for (addr = addrs; addr != nullptr; addr = addr->ai_next) {
+        fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+        if (fd == -1) {
+            continue;
+        }
+
+        int optval = 1;
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
+            std::cerr << "WARNING: problem setting SO_REUSEADDR: " << strerror(errno) << std::endl;
+            /* non-critical error.. keep going */
+        }
+
+        if (bind(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
+            break;
+        }
+
+        IOUtils::Close(fd);
+    }
+
+    if (addr == nullptr) {
+        throw IOException("Unable to bind socket");
+    }
+
+    return fd;
+}
+
+
 int IOUtils::BindSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6) {
     int ai_family;
     if (use_ipv4 && use_ipv6) {
@@ -110,36 +140,6 @@ int IOUtils::BindSocket(SocketAddress const& address, bool use_ipv4, bool use_ip
         throw;
     }
     freeaddrinfo(addrs);
-
-    return fd;
-}
-
-
-int IOUtils::BindSocket(struct addrinfo* addrs) {
-    int fd;
-    struct addrinfo* addr;
-    for (addr = addrs; addr != nullptr; addr = addr->ai_next) {
-        fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-        if (fd == -1) {
-            continue;
-        }
-
-        int optval = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
-            std::cerr << "WARNING: problem setting SO_REUSEADDR: " << strerror(errno) << std::endl;
-            /* non-critical error.. keep going */
-        }
-
-        if (bind(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
-            break;
-        }
-
-        Close(fd);
-    }
-
-    if (addr == nullptr) {
-        throw IOException("Unable to bind socket");
-    }
 
     return fd;
 }
