@@ -84,7 +84,7 @@ void Server::ThreadMain(void) {
     auto use_ipv4 = config.UseIPV4();
     auto use_ipv6 = config.UseIPV6();
 
-    int listen_fd = IOUtils::BindSocket(bind_address, use_ipv4, use_ipv6);
+    int listen_fd = IOUtils::OpenSocket(IOUtils::SocketAddressType::bind, bind_address, use_ipv4, use_ipv6);
     IOUtils::Listen(listen_fd, 1024);
     IOUtils::SetNonBlocking(listen_fd);
     AddFD(listen_fd, EVFILT_READ, nullptr);
@@ -168,7 +168,7 @@ void Server::ThreadMain(void) {
 
         for (BufferedNetworkConnection* connection : connections) {
             // Deleting the BufferedNetworkConnection will close the underlying fd, which internally will
-            // also remove it from the kq (whereas with epoll, closing the underlying fd leaves the fd
+            // also remove it from the kqueue (whereas with epoll, closing the underlying fd leaves the fd
             // still a member of any epoll fds to which it was added).
             delete connection;
         }

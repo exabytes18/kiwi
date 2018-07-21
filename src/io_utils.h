@@ -7,10 +7,12 @@
 
 
 namespace IOUtils {
+    enum class SocketAddressType { bind, connect };
+
     void Close(int fd) noexcept;
     void ForceWriteByte(int fd, char c) noexcept;
     void SetNonBlocking(int fd);
-    int BindSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6);
+    int OpenSocket(SocketAddressType type, SocketAddress const& address, bool use_ipv4, bool use_ipv6);
     void Listen(int fd, int backlog);
 }
 

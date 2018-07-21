@@ -74,7 +74,7 @@ void IOUtils::SetNonBlocking(int fd) {
 }
 
 
-static int BindSocket(struct addrinfo* addrs) {
+static int OpenSocket(IOUtils::SocketAddressType type, struct addrinfo* addrs) {
     int fd;
     struct addrinfo* addr;
     for (addr = addrs; addr != nullptr; addr = addr->ai_next) {
@@ -89,8 +89,17 @@ static int BindSocket(struct addrinfo* addrs) {
             /* non-critical error.. keep going */
         }
 
-        if (bind(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
-            break;
+        if (type == IOUtils::SocketAddressType::connect) {
+            if (connect(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
+                break;
+            }
+        } else if (type == IOUtils::SocketAddressType::bind) {
+            if (bind(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
+                break;
+            }
+        } else {
+            std::cerr << "Unknown socket addressing type" << std::endl;
+            abort();
         }
 
         IOUtils::Close(fd);
@@ -104,7 +113,7 @@ static int BindSocket(struct addrinfo* addrs) {
 }
 
 
-int IOUtils::BindSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6) {
+int IOUtils::OpenSocket(SocketAddressType type, SocketAddress const& address, bool use_ipv4, bool use_ipv6) {
     int ai_family;
     if (use_ipv4 && use_ipv6) {
         ai_family = AF_UNSPEC;
@@ -134,7 +143,7 @@ int IOUtils::BindSocket(SocketAddress const& address, bool use_ipv4, bool use_ip
 
     int fd;
     try {
-        fd = BindSocket(addrs);
+        fd = OpenSocket(type, addrs);
     } catch (...) {
         freeaddrinfo(addrs);
         throw;
