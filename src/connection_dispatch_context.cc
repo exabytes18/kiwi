@@ -1,9 +1,10 @@
 #include <iostream>
 #include "connection_dispatch_context.h"
 
+
 using namespace std;
 
-
+/*
 ConnectionDispatchContext::ConnectionDispatchContext(
     Server& server,
     unique_ptr<BufferedNetworkConnection> connection) :
@@ -173,3 +174,5 @@ void ConnectionDispatchContext::ReadFromSocketAndProcessData(void) {
 void ConnectionDispatchContext::WriteToSocket(void) {
     // TODO: implement
 }
+
+*/

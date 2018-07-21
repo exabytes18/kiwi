@@ -6,13 +6,13 @@
 #include "exceptions.h"
 #include "io_utils.h"
 
-using namespace std;
 
+using namespace std;
 
 BufferedNetworkConnection::BufferedNetworkConnection(int fd) :
         fd(fd),
-        read_buffer(32*1024),
-        write_buffer(32*1024),
+        read_buffer(64*1024),
+        write_buffer(64*1024),
         flushing_in_progress(false) {
     IOUtils::SetNonBlocking(fd);
     read_buffer.Flip();

@@ -1,13 +1,13 @@
 #include "exceptions.h"
-#include "rocksdb/cache.h"
+/*#include "rocksdb/cache.h"
 #include "rocksdb/filter_policy.h"
 #include "rocksdb/slice_transform.h"
-#include "rocksdb/table.h"
+#include "rocksdb/table.h"*/
 #include "storage.h"
 
 
 Storage::Storage(ServerConfig const& server_config) {
-    rocksdb::Options options;
+    /*rocksdb::Options options;
     options.IncreaseParallelism();
     options.max_file_opening_threads = -1;
     options.max_background_jobs = 4;
@@ -36,7 +36,7 @@ Storage::Storage(ServerConfig const& server_config) {
     rocksdb::Status status = rocksdb::DB::Open(options, data_dir, &db);
     if (!status.ok()) {
         throw StorageException(status.ToString());
-    }
+    }*/
 }
 
 
@@ -45,5 +45,5 @@ void Deliver(uint64_t offset) {
 
 
 Storage::~Storage(void) {
-    delete db;
+    /*delete db;*/
 }

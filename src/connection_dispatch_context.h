@@ -5,12 +5,10 @@
 #include "protocol.h"
 #include "server.h"
 
-using namespace std;
-
 
 class ConnectionDispatchContext {
 public:
-    ConnectionDispatchContext(Server& server, unique_ptr<BufferedNetworkConnection> connection);
+    ConnectionDispatchContext(Server& server, std::unique_ptr<BufferedNetworkConnection> connection);
     ~ConnectionDispatchContext(void);
     void ReadFromSocketAndProcessData(void);
     void WriteToSocket(void);
@@ -29,7 +27,7 @@ public:
 
 private:
     Server& server;
-    unique_ptr<BufferedNetworkConnection> connection;
+    std::unique_ptr<BufferedNetworkConnection> connection;
 
     ReadState read_state;
 
@@ -50,9 +48,9 @@ private:
     uint16_t cluster_name_length;
 
     Buffer cluster_name_buffer;
-    string cluster_name;
+    std::string cluster_name;
 
-    void PrepareStateForSendingSimpleReply(Protocol::MessageType message_type, uint32_t error_code, string error_message);
+    void PrepareStateForSendingSimpleReply(Protocol::MessageType message_type, uint32_t error_code, std::string error_message);
 };
 
 #endif  // KIWI_DISPATCH_CONTEXT_H_

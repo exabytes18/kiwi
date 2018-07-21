@@ -3,12 +3,10 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "connection_dispatcher.h"
-#include "connection_listener.h"
 #include "server.h"
 
-using namespace std;
 
+using namespace std;
 
 static void PrintUsage(int argc, char * const argv[]) {
     const char * program_name = (argc > 0) ? (argv[0]) : ("(unknown)");
@@ -25,8 +23,6 @@ static int Run(const char * config_file_path, const sigset_t termination_signals
 
     // Start the server
     Server server(config, storage);
-    ConnectionDispatcher connection_dispatcher(server);
-    ConnectionListener connection_listener(config, connection_dispatcher);
 
     // Wait for termination signal
     int termination_signal;

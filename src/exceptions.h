@@ -20,11 +20,6 @@ public:
     DnsResolutionException(std::string const& msg) : IOException(msg) {}
 };
 
-class EventLoopException : public IOException {
-public:
-    EventLoopException(std::string const& msg) : IOException(msg) {}
-};
-
 class FileNotFoundException : public IOException {
 public:
     FileNotFoundException(std::string const& msg) : IOException(msg) {}

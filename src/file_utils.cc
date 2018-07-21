@@ -11,8 +11,8 @@
 
 #include <iostream>
 
-using namespace std;
 
+using namespace std;
 
 string FileUtils::ReadFile(string const& path) {
     stringstream ss;

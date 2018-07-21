@@ -15,7 +15,7 @@ void IOUtils::Close(int fd) noexcept {
     // call returned an error, as operating systems are permitted to handle
     // this as they see fit.
     //
-    // TL;DR: for true portability, we need to retry the close() on some OS.
+    // TL;DR: for true portability, we might need to retry the close() on some OS.
     int err = close(fd);
     if (err == -1) {
         std::cerr << "Problem closing file descriptor: " << strerror(errno) << std::endl;
@@ -74,44 +74,7 @@ void IOUtils::SetNonBlocking(int fd) {
 }
 
 
-int IOUtils::OpenSocket(struct addrinfo* addrs) {
-    int fd;
-    struct addrinfo* addr;
-    for (addr = addrs; addr != nullptr; addr = addr->ai_next) {
-        fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-        if (fd == -1) {
-            continue;
-        }
-
-        int optval = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
-            std::cerr << "WARNING: problem setting SO_REUSEADDR: " << strerror(errno) << std::endl;
-            /* non-critical error.. keep going */
-        }
-
-        if (bind(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
-            break;
-        }
-
-        Close(fd);
-    }
-
-    if (addr == nullptr) {
-        throw IOException("Unable to bind socket");
-    }
-
-    return fd;
-}
-
-
-static void Listen(int fd, int backlog) {
-    if (listen(fd, backlog) != 0) {
-        throw IOException("Problem listening to socket: " + std::string(strerror(errno)));
-    }
-}
-
-
-int IOUtils::ListenSocket(SocketAddress const& address, int listen_backlog, bool use_ipv4, bool use_ipv6) {
+int IOUtils::BindSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6) {
     int ai_family;
     if (use_ipv4 && use_ipv6) {
         ai_family = AF_UNSPEC;
@@ -141,19 +104,49 @@ int IOUtils::ListenSocket(SocketAddress const& address, int listen_backlog, bool
 
     int fd;
     try {
-        fd = OpenSocket(addrs);
+        fd = BindSocket(addrs);
     } catch (...) {
         freeaddrinfo(addrs);
         throw;
     }
     freeaddrinfo(addrs);
 
-    try {
-        Listen(fd, listen_backlog);
-    } catch (...) {
+    return fd;
+}
+
+
+int IOUtils::BindSocket(struct addrinfo* addrs) {
+    int fd;
+    struct addrinfo* addr;
+    for (addr = addrs; addr != nullptr; addr = addr->ai_next) {
+        fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+        if (fd == -1) {
+            continue;
+        }
+
+        int optval = 1;
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
+            std::cerr << "WARNING: problem setting SO_REUSEADDR: " << strerror(errno) << std::endl;
+            /* non-critical error.. keep going */
+        }
+
+        if (bind(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
+            break;
+        }
+
         Close(fd);
-        throw;
+    }
+
+    if (addr == nullptr) {
+        throw IOException("Unable to bind socket");
     }
 
     return fd;
+}
+
+
+void IOUtils::Listen(int fd, int backlog) {
+    if (listen(fd, backlog) != 0) {
+        throw IOException("Problem listening to socket: " + std::string(strerror(errno)));
+    }
 }

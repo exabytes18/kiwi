@@ -6,6 +6,8 @@
 #include "yaml-cpp/exceptions.h"
 
 
+using namespace std;
+
 template <class T>
 static T ParseValue(char const* config_path, string const& name, YAML::Node& value) {
     try {

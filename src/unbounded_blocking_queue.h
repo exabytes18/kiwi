@@ -1,0 +1,8 @@
+#ifndef KIWI_UNBOUNDED_BLOCKING_QUEUE_H_
+#define KIWI_UNBOUNDED_BLOCKING_QUEUE_H_
+
+
+class UnboundedBlockingQueue {
+};
+
+#endif  // KIWI_UNBOUNDED_BLOCKING_QUEUE_H_

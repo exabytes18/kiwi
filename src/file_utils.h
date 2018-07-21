@@ -3,10 +3,9 @@
 
 #include <string>
 
-using namespace std;
 
 namespace FileUtils {
-    string ReadFile(string const& path);
+    std::string ReadFile(std::string const& path);
 }
 
 #endif  // KIWI_FILE_UTILS_H_

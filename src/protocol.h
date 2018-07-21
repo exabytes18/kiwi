@@ -4,8 +4,6 @@
 #include <sstream>
 #include <string>
 
-using namespace std;
-
 
 namespace Protocol {
     const uint32_t MAGIC_NUMBER = 0xE6955EBF;
@@ -25,8 +23,8 @@ namespace Protocol {
         UNSUPPORTED_PROTOCOL_VERSION = 2,
     };
 
-    string InvalidMagicNumberErrorMessage(uint32_t magic_number);
-    string UnsupportedProtocolVersionErrorMessage(uint32_t protocol_version);
+    std::string InvalidMagicNumberErrorMessage(uint32_t magic_number);
+    std::string UnsupportedProtocolVersionErrorMessage(uint32_t protocol_version);
 }
 
 #endif  // KIWI_PROTOCOL_H_

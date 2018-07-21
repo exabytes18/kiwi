@@ -2,6 +2,8 @@
 #include "protocol.h"
 
 
+using namespace std;
+
 string Protocol::InvalidMagicNumberErrorMessage(uint32_t magic_number) {
     stringstream ss;
     ss << "Server received " << magic_number << " as the magic number; ";

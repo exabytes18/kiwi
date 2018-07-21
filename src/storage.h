@@ -1,10 +1,9 @@
 #ifndef KIWI_STORAGE_H_
 #define KIWI_STORAGE_H_
 
-#include "rocksdb/db.h"
+/*#include "rocksdb/db.h"*/
 #include "server_config.h"
 
-using namespace std;
 
 class Storage {
 public:
@@ -13,7 +12,7 @@ public:
     ~Storage(void);
 
 private:
-    rocksdb::DB* db;
+    /*rocksdb::DB* db;*/
 };
 
 #endif  // KIWI_STORAGE_H_
