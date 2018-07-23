@@ -10,11 +10,13 @@ namespace Protocol {
     const uint32_t PROTOCOL_VERSION = 1;
 
     enum MessageType {
-        UNDEFINED = 0,
-        CLIENT_HELLO = 1,
-        CLIENT_HELLO_REPLY = 2,
-        SERVER_HELLO = 3,
-        SERVER_HELLO_REPLY = 4,
+        UNDEFINED =              0x00000000,
+
+        CLIENT_HELLO =           0x00000001,
+        CLIENT_HELLO_REPLY =     0x00000002,
+
+        SERVER_HELLO =           0x80000000,
+        SERVER_HELLO_REPLY =     0x80000001,
     };
 
     enum ErrorCode {

@@ -14,21 +14,21 @@ Constants:
 Request/Reply Message Definitions:
 
     Undefined:
-        [4 bytes] (int) 0
+        [4 bytes] 0x00000000
 
     ClientHello:
-        [4 bytes] (int) 1
+        [4 bytes] 0x00000001
         [4 bytes] Kiwi Magic Number
         [4 bytes] Client Protocol Version
 
     ClientHelloReply
-        [4 bytes] (int) 2
+        [4 bytes] 0x00000002
         [4 bytes] Error Code
         [2 bytes] Error Message Length
         [n bytes] Error Message
 
     ServerHello
-        [4 bytes] (int) 3
+        [4 bytes] 0x80000000
         [4 bytes] Kiwi Magic Number
         [4 bytes] Server Protocol Version
         [4 bytes] Server ID
@@ -36,7 +36,7 @@ Request/Reply Message Definitions:
         [n bytes] Cluster Name
 
     ServerHelloReply
-        [4 bytes] (int) 4
+        [4 bytes] 0x80000001
         [4 bytes] Error Code
         [2 bytes] Error Message Length
         [n bytes] Error Message

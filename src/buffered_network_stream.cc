@@ -2,37 +2,36 @@
 #include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "buffered_network_connection.h"
+#include "buffered_network_stream.h"
 #include "exceptions.h"
 #include "io_utils.h"
 
 
 using namespace std;
 
-BufferedNetworkConnection::BufferedNetworkConnection(int fd) :
+BufferedNetworkStream::BufferedNetworkStream(int fd) :
         fd(fd),
-        read_buffer(64*1024),
-        write_buffer(64*1024),
+        read_buffer(64 * 1024),
+        write_buffer(64 * 1024),
         flushing_in_progress(false) {
-    IOUtils::SetNonBlocking(fd);
     read_buffer.Flip();
 }
 
 
-BufferedNetworkConnection::~BufferedNetworkConnection(void) {
+BufferedNetworkStream::~BufferedNetworkStream(void) {
     // TODO: verify that the read_buffer gets deleted automatically
     IOUtils::Close(fd);
 }
 
 
-int BufferedNetworkConnection::GetFD(void) {
+int BufferedNetworkStream::GetFD(void) {
     return fd;
 }
 
 
-bool BufferedNetworkConnection::Fill(Buffer& buffer) {
+BufferedNetworkStream::Status BufferedNetworkStream::Fill(Buffer& buffer) {
     while (buffer.Remaining() > 0) {
-        buffer.Put(read_buffer);
+        buffer.FillFrom(read_buffer);
         if (read_buffer.Remaining() == 0) {
             auto data = read_buffer.Data();
             auto capacity = read_buffer.Capacity();
@@ -40,41 +39,53 @@ bool BufferedNetworkConnection::Fill(Buffer& buffer) {
             if (bytes_read == -1) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     break;
-                } else if (errno == ECONNREFUSED) {
-                    throw ConnectionClosedException("Connection closed: " + string(strerror(errno)));
+                } else if (errno == ECONNREFUSED || errno == ECONNRESET) {
+                    return Status::closed;
                 } else {
                     throw IOException("Problem reading data from socket: " + string(strerror(errno)));
                 }
             } else if (bytes_read == 0) {
-                throw ConnectionClosedException("Connection closed");
+                return Status::closed;
             } else {
                 read_buffer.Position(0);
                 read_buffer.Limit(bytes_read);
             }
         }
     }
-    return buffer.Remaining() == 0;
-}
 
-
-bool BufferedNetworkConnection::Write(Buffer& buffer) {
-    if (flushing_in_progress) {
-        return false;
+    if (buffer.Remaining() == 0) {
+        return Status::complete;
     } else {
-        while (buffer.Remaining() > 0) {
-            write_buffer.Put(buffer);
-            if (write_buffer.Remaining() == 0) {
-                if (!Flush()) {
-                    break;
-                }
-            }
-        }
-        return buffer.Remaining() == 0;
+        return Status::incomplete;
     }
 }
 
 
-bool BufferedNetworkConnection::Flush(void) {
+BufferedNetworkStream::Status BufferedNetworkStream::Write(Buffer& buffer) {
+    if (flushing_in_progress) {
+        return Status::incomplete;
+    } else {
+        while (buffer.Remaining() > 0) {
+            write_buffer.FillFrom(buffer);
+            if (write_buffer.Remaining() == 0) {
+                Status status = Flush();
+                // TODO: I don't like this logic.. could break too easily if we add more enum values or something.
+                if (status == Status::closed || status == Status::incomplete) {
+                    return status;
+                }
+            }
+        }
+
+        if (buffer.Remaining() == 0) {
+            return Status::complete;
+        } else {
+            return Status::incomplete;
+        }
+    }
+}
+
+
+BufferedNetworkStream::Status BufferedNetworkStream::Flush(void) {
     if (!flushing_in_progress) {
         write_buffer.Flip();
         flushing_in_progress = true;
@@ -86,10 +97,10 @@ bool BufferedNetworkConnection::Flush(void) {
         auto remaining = write_buffer.Remaining();
         auto bytes_written = send(fd, data + position, remaining, 0);
         if (bytes_written == -1) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK || errno == ENOBUFS/*unsure if needed*/) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 break;
-            } else if (errno == ECONNRESET) {
-                throw ConnectionClosedException("Connection closed: " + string(strerror(errno)));
+            } else if (errno == ECONNREFUSED || errno == ECONNRESET) {
+                return Status::closed;
             } else {
                 throw IOException("Problem reading data from socket: " + string(strerror(errno)));
             }
@@ -101,8 +112,8 @@ bool BufferedNetworkConnection::Flush(void) {
     if (write_buffer.Remaining() == 0) {
         write_buffer.Clear();
         flushing_in_progress = false;
-        return true;
+        return Status::complete;
     } else {
-        return false;
+        return Status::incomplete;
     }
 }

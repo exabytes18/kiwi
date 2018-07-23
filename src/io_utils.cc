@@ -52,21 +52,23 @@ void IOUtils::ForceWriteByte(int fd, char c) noexcept {
 
 void IOUtils::SetNonBlocking(int fd) {
     for (;;) {
-        int flags = fcntl(fd, F_GETFL);
-        if (flags == -1) {
+        int existing_flags = fcntl(fd, F_GETFL);
+        if (existing_flags == -1) {
             if (errno == EINTR) {
                 continue;
             } else {
-                throw IOException("Problem retrieving fd flags: " + std::string(strerror(errno)));
+                std::cerr << "Problem fetching fd flags: " << strerror(errno) << std::endl;
+                abort();
             }
         }
 
-        flags = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-        if (flags == -1) {
+        int updated_flags = fcntl(fd, F_SETFL, existing_flags | O_NONBLOCK);
+        if (updated_flags == -1) {
             if (errno == EINTR) {
                 continue;
             } else {
-                throw IOException("Problem setting fd as nonblocking: " + std::string(strerror(errno)));
+                std::cerr << "Problem setting fd flags: " << strerror(errno) << std::endl;
+                abort();
             }
         }
         return;
@@ -74,7 +76,11 @@ void IOUtils::SetNonBlocking(int fd) {
 }
 
 
-static int OpenSocket(IOUtils::SocketAddressType type, struct addrinfo* addrs) {
+static int OpenAndBindSocket(struct addrinfo* addrs) {
+    if (addrs == nullptr) {
+        throw IOException("No addresses found");
+    }
+
     int fd;
     struct addrinfo* addr;
     for (addr = addrs; addr != nullptr; addr = addr->ai_next) {
@@ -86,34 +92,23 @@ static int OpenSocket(IOUtils::SocketAddressType type, struct addrinfo* addrs) {
         int optval = 1;
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
             std::cerr << "WARNING: problem setting SO_REUSEADDR: " << strerror(errno) << std::endl;
-            /* non-critical error.. keep going */
-        }
-
-        if (type == IOUtils::SocketAddressType::connect) {
-            if (connect(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
-                break;
-            }
-        } else if (type == IOUtils::SocketAddressType::bind) {
-            if (bind(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
-                break;
-            }
-        } else {
-            std::cerr << "Unknown socket addressing type" << std::endl;
             abort();
         }
 
-        IOUtils::Close(fd);
+        if (bind(fd, addr->ai_addr, addr->ai_addrlen) == -1) {
+            int bind_errno = errno;
+            IOUtils::Close(fd);
+            throw IOException("Problem binding socket: " + std::string(strerror(bind_errno)));
+        }
+
+        return fd;
     }
 
-    if (addr == nullptr) {
-        throw IOException("Unable to bind socket");
-    }
-
-    return fd;
+    throw IOException("Unable to create socket: " + std::string(strerror(errno)));
 }
 
 
-int IOUtils::OpenSocket(SocketAddressType type, SocketAddress const& address, bool use_ipv4, bool use_ipv6) {
+int IOUtils::ListenSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6, int backlog) {
     int ai_family;
     if (use_ipv4 && use_ipv6) {
         ai_family = AF_UNSPEC;
@@ -143,19 +138,17 @@ int IOUtils::OpenSocket(SocketAddressType type, SocketAddress const& address, bo
 
     int fd;
     try {
-        fd = OpenSocket(type, addrs);
+        fd = OpenAndBindSocket(addrs);
     } catch (...) {
         freeaddrinfo(addrs);
         throw;
     }
     freeaddrinfo(addrs);
 
-    return fd;
-}
-
-
-void IOUtils::Listen(int fd, int backlog) {
     if (listen(fd, backlog) != 0) {
+        Close(fd);
         throw IOException("Problem listening to socket: " + std::string(strerror(errno)));
     }
+
+    return fd;
 }

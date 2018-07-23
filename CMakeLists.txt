@@ -21,6 +21,19 @@ endif(NOT CMAKE_BUILD_TYPE)
 # declare our executable
 add_executable(kiwidb ${SOURCES})
 
+# Use jemalloc
+option(WITH_JEMALLOC "build with jemalloc" OFF)
+if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    # FreeBSD uses jemalloc as default malloc
+    set(WITH_JEMALLOC ON)
+else()
+    if(WITH_JEMALLOC)
+        find_package(Jemalloc REQUIRED)
+        add_definitions(-DKIWI_JEMALLOC -DJEMALLOC_NO_DEMANGLE)
+        include_directories(${JEMALLOC_INCLUDE_DIR})
+    endif()
+endif()
+
 # check for epoll or kqueue
 include(CheckSymbolExists)
 check_symbol_exists(epoll_create "sys/epoll.h" HAVE_EPOLL)

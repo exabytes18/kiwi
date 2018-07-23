@@ -73,7 +73,7 @@ void Buffer::Flip(void) {
 }
 
 
-void Buffer::Put(Buffer& src) {
+void Buffer::FillFrom(Buffer& src) {
     size_t bytes_to_copy = src.Remaining();
     size_t space_available = Remaining();
     if (space_available < bytes_to_copy) {

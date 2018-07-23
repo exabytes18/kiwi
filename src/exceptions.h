@@ -10,11 +10,6 @@ public:
     IOException(std::string const& msg) : runtime_error(msg) {}
 };
 
-class ConnectionClosedException : public IOException {
-public:
-    ConnectionClosedException(std::string const& msg) : IOException(msg) {}
-};
-
 class DnsResolutionException : public IOException {
 public:
     DnsResolutionException(std::string const& msg) : IOException(msg) {}

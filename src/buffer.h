@@ -21,7 +21,7 @@ public:
     size_t Remaining(void);
     void Clear(void);
     void Flip(void);
-    void Put(Buffer& src);
+    void FillFrom(Buffer& src);
 
     /*
      * Reads the bytes from the data array, convert the value from network

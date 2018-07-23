@@ -84,3 +84,11 @@ Per-node thread architecture:
 
     Implementation notes:
         - Use poll() instead of epoll() or kqueue() since it's likely faster for this case (small set of file descriptors, which is largely stable over time).
+
+
+
+
+
+
+
+Track the amount of time that event loop threads are busy vs idle so that we can identify bottlenecks easier.
