@@ -13,14 +13,12 @@ public:
     Server(ServerConfig const& config, Storage& storage);
     ~Server(void);
 
+private:
     class Connection {
     public:
-        Connection(Server& server, int fd);
+        Connection(int fd);
         ~Connection(void);
-        bool Recv(void);
-        bool Send(void);
 
-    private:
         enum class ReadState {
             READING_MESSAGE_TYPE,
             READING_CLIENT_HELLO_MAGIC_NUMBER,
@@ -33,7 +31,6 @@ public:
             TERMINAL,
         };
 
-        Server& server;
         BufferedNetworkStream stream;
         bool watching_for_writability;
         ReadState read_state;
@@ -56,11 +53,8 @@ public:
 
         Buffer cluster_name_buffer;
         std::string cluster_name;
-
-        void WatchForWritability(bool watch_for_writability);
     };
 
-private:
     ServerConfig const& config;
     Storage& storage;
     int kq;
@@ -71,6 +65,11 @@ private:
     void ThreadMain(void);
     void AddFD(int fd, short filter, void* data);
     void RemoveFD(int fd, short filter);
+    void RecvData(Connection* connection);
+    void SendData(Connection* connection);
+    void PrepareForSendingErrorReply(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
+    void WatchForWritability(Connection* connection, bool watch_for_writability);
+    void CloseConnection(Connection* connection);
 };
 
 #endif  // KIWI_SERVER_H_
