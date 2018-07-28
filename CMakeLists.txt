@@ -11,7 +11,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # compiler flags
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-g -O3 -flto")
 add_definitions(-Wall -Wextra -pedantic -std=c++14)
 
 if(NOT CMAKE_BUILD_TYPE)
