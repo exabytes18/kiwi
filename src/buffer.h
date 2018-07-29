@@ -10,6 +10,14 @@ public:
     Buffer(size_t capacity);
     ~Buffer(void);
 
+    // No copying
+    Buffer(Buffer const& other) = delete;
+    Buffer& operator=(Buffer const& other) = delete;
+
+    // No moving
+    Buffer(Buffer&& other) = delete;
+    Buffer& operator=(Buffer&& other) = delete;
+
     size_t Position(void);
     void Position(size_t position);
     size_t Limit(void);
@@ -21,7 +29,7 @@ public:
     size_t Remaining(void);
     void Clear(void);
     void Flip(void);
-    void FillFrom(Buffer& src);
+    void FillFrom(Buffer* src);
 
     /*
      * Reads the bytes from the data array, convert the value from network

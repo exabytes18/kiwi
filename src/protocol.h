@@ -11,7 +11,7 @@ namespace Protocol {
 
     enum MessageType {
         UNDEFINED =              0x00000000,
-        ERROR =                  0x00000001,
+        ERROR_REPLY =            0x00000001,
 
         CLIENT_HELLO =           0x40000000,
         CLIENT_HELLO_REPLY =     0x40000001,

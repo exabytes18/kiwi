@@ -38,6 +38,7 @@ private:
         bool interested_in_reads;
         bool interested_in_writes;
         ReadState read_state;
+        bool close_connection_after_all_buffers_have_been_flushed;
 
         // Server Connection Data
         uint32_t server_id;
@@ -51,7 +52,7 @@ private:
         Buffer incoming_cluster_name_buffer;
 
         // Temporary buffers for outgoing data
-        std::deque<Buffer> outgoing_buffers;
+        std::deque<Buffer*> outgoing_buffers;
     };
 
     ServerConfig const& config;
@@ -66,6 +67,10 @@ private:
     void RemoveFD(int fd, short filter);
     void RecvData(Connection* connection);
     void SendData(Connection* connection);
+
+    void SendClientHelloReply(Connection* connection);
+    void SendServerHelloReply(Connection* connection);    
+
     void StopReadingAndSendErrorReplyAndClose(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
     void SetReadInterest(Connection* connection, bool interested_in_reads);
     void SetWriteInterest(Connection* connection, bool interested_in_writes);

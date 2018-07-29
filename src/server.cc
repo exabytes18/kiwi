@@ -207,7 +207,7 @@ void Server::RecvData(Connection* connection) {
         switch (connection->read_state) {
             case Connection::ReadState::READING_MESSAGE_TYPE:
                 cout << "READING_MESSAGE_TYPE" << endl;
-                switch (connection->stream.Fill(connection->incoming_message_type_buffer)) {
+                switch (connection->stream.Fill(&connection->incoming_message_type_buffer)) {
                     case BufferedNetworkStream::Status::complete:
                         connection->incoming_message_type_buffer.Flip();
                         incoming_message_type_int = connection->incoming_message_type_buffer.UnsafeGetInt();
@@ -238,7 +238,7 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_CLIENT_HELLO_MAGIC_NUMBER:
                 cout << "READING_CLIENT_HELLO_MAGIC_NUMBER" << endl;
-                switch (connection->stream.Fill(connection->incoming_magic_number_buffer)) {
+                switch (connection->stream.Fill(&connection->incoming_magic_number_buffer)) {
                     case BufferedNetworkStream::Status::complete:
                         connection->incoming_magic_number_buffer.Flip();
                         incoming_magic_number = connection->incoming_magic_number_buffer.UnsafeGetInt();
@@ -264,13 +264,14 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_CLIENT_HELLO_PROTOCOL_VERSION:
                 cout << "READING_CLIENT_HELLO_PROTOCOL_VERSION" << endl;
-                switch (connection->stream.Fill(connection->incoming_protocol_version_buffer)) {
+                switch (connection->stream.Fill(&connection->incoming_protocol_version_buffer)) {
                     case BufferedNetworkStream::Status::complete:
                         connection->incoming_protocol_version_buffer.Flip();
                         incoming_protocol_version = connection->incoming_protocol_version_buffer.UnsafeGetInt();
                         connection->incoming_protocol_version_buffer.Clear();
                         if (incoming_protocol_version == Protocol::PROTOCOL_VERSION) {
                             connection->read_state = Connection::ReadState::READING_MESSAGE_TYPE;
+                            SendClientHelloReply(connection);
                         } else {
                             StopReadingAndSendErrorReplyAndClose(
                                 connection,
@@ -290,7 +291,7 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_MAGIC_NUMBER:
                 cout << "READING_SERVER_HELLO_MAGIC_NUMBER" << endl;
-                switch (connection->stream.Fill(connection->incoming_magic_number_buffer)) {
+                switch (connection->stream.Fill(&connection->incoming_magic_number_buffer)) {
                     case BufferedNetworkStream::Status::complete:
                         connection->incoming_magic_number_buffer.Flip();
                         incoming_magic_number = connection->incoming_magic_number_buffer.UnsafeGetInt();
@@ -316,7 +317,7 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_PROTOCOL_VERSION:
                 cout << "READING_SERVER_HELLO_PROTOCOL_VERSION" << endl;
-                switch (connection->stream.Fill(connection->incoming_protocol_version_buffer)) {
+                switch (connection->stream.Fill(&connection->incoming_protocol_version_buffer)) {
                     case BufferedNetworkStream::Status::complete:
                         connection->incoming_protocol_version_buffer.Flip();
                         incoming_protocol_version = connection->incoming_protocol_version_buffer.UnsafeGetInt();
@@ -342,7 +343,7 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_SERVER_ID:
                 cout << "READING_SERVER_HELLO_SERVER_ID" << endl;
-                switch (connection->stream.Fill(connection->incoming_server_id_buffer)) {
+                switch (connection->stream.Fill(&connection->incoming_server_id_buffer)) {
                     case BufferedNetworkStream::Status::complete:
                         connection->incoming_server_id_buffer.Flip();
                         connection->server_id = connection->incoming_server_id_buffer.UnsafeGetInt();
@@ -361,7 +362,7 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_CLUSTER_NAME_LENGTH:
                 cout << "READING_SERVER_HELLO_CLUSTER_NAME_LENGTH" << endl;
-                switch (connection->stream.Fill(connection->incoming_cluster_name_length_buffer)) {
+                switch (connection->stream.Fill(&connection->incoming_cluster_name_length_buffer)) {
                     case BufferedNetworkStream::Status::complete:
                         connection->incoming_cluster_name_length_buffer.Flip();
                         incoming_cluster_name_length = connection->incoming_cluster_name_length_buffer.UnsafeGetShort();
@@ -380,7 +381,7 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_CLUSTER_NAME:
                 cout << "READING_SERVER_HELLO_CLUSTER_NAME" << endl;
-                switch (connection->stream.Fill(connection->incoming_cluster_name_buffer)) {
+                switch (connection->stream.Fill(&connection->incoming_cluster_name_buffer)) {
                     case BufferedNetworkStream::Status::complete:
                         connection->incoming_cluster_name_buffer.Flip();
                         incoming_cluster_name = connection->incoming_cluster_name_buffer.UnsafeGetString(connection->incoming_cluster_name_buffer.Limit());
@@ -416,36 +417,21 @@ void Server::RecvData(Connection* connection) {
 }
 
 
-void Server::SendData(Connection* connection) {
-    auto it = connection->outgoing_buffers.begin();
-    while (it != connection->outgoing_buffers.end()) {
-        Buffer& buffer = *it;
-        switch (connection->stream.Write(buffer)) {
-            case BufferedNetworkStream::Status::complete:
-                it = connection->outgoing_buffers.erase(it);
-                break;
+void Server::SendClientHelloReply(Connection* connection) {
+    Buffer* client_hello_reply_buffer = new Buffer(4);
+    client_hello_reply_buffer->UnsafePutInt(Protocol::MessageType::CLIENT_HELLO_REPLY);
+    client_hello_reply_buffer->Flip();
+    connection->outgoing_buffers.push_back(client_hello_reply_buffer);
+    SetWriteInterest(connection, true);
+}
 
-            case BufferedNetworkStream::Status::incomplete:
-                return;
 
-            case BufferedNetworkStream::Status::closed:
-                CloseAndDestroy(connection);
-                return;
-        }
-    }
-
-    switch (connection->stream.Flush()) {
-        case BufferedNetworkStream::Status::complete:
-            SetWriteInterest(connection, false);
-            break;
-
-        case BufferedNetworkStream::Status::incomplete:
-            return;
-
-        case BufferedNetworkStream::Status::closed:
-            CloseAndDestroy(connection);
-            return;
-    }
+void Server::SendServerHelloReply(Connection* connection) {
+    Buffer* server_hello_reply_buffer = new Buffer(4);
+    server_hello_reply_buffer->UnsafePutInt(Protocol::MessageType::SERVER_HELLO_REPLY);
+    server_hello_reply_buffer->Flip();
+    connection->outgoing_buffers.push_back(server_hello_reply_buffer);
+    SetWriteInterest(connection, true);
 }
 
 
@@ -466,14 +452,54 @@ void Server::StopReadingAndSendErrorReplyAndClose(
     connection->read_state = Connection::ReadState::TERMINAL;
     SetReadInterest(connection, false);
 
-    auto error_reply_buffer = connection->outgoing_buffers.emplace_back(4 + 4 + 2 + error_message.length());
-    error_reply_buffer.UnsafePutInt(0x00000001);
-    error_reply_buffer.UnsafePutInt(error_code);
-    error_reply_buffer.UnsafePutShort(error_message.length());
-    error_reply_buffer.UnsafePutString(error_message);
-    error_reply_buffer.Flip();
+    Buffer* error_reply_buffer = new Buffer(4 + 4 + 2 + error_message.length());
+    error_reply_buffer->UnsafePutInt(Protocol::MessageType::ERROR_REPLY);
+    error_reply_buffer->UnsafePutInt(error_code);
+    error_reply_buffer->UnsafePutShort(error_message.length());
+    error_reply_buffer->UnsafePutString(error_message);
+    error_reply_buffer->Flip();
+    connection->outgoing_buffers.push_back(error_reply_buffer);
 
+    connection->close_connection_after_all_buffers_have_been_flushed = true;
     SetWriteInterest(connection, true);
+}
+
+
+void Server::SendData(Connection* connection) {
+    auto it = connection->outgoing_buffers.begin();
+    while (it != connection->outgoing_buffers.end()) {
+        Buffer* buffer = *it;
+        switch (connection->stream.Write(buffer)) {
+            case BufferedNetworkStream::Status::complete:
+                it = connection->outgoing_buffers.erase(it);
+                delete buffer;
+                break;
+
+            case BufferedNetworkStream::Status::incomplete:
+                return;
+
+            case BufferedNetworkStream::Status::closed:
+                CloseAndDestroy(connection);
+                return;
+        }
+    }
+
+    switch (connection->stream.Flush()) {
+        case BufferedNetworkStream::Status::complete:
+            if (connection->close_connection_after_all_buffers_have_been_flushed) {
+                CloseAndDestroy(connection);
+            } else {
+                SetWriteInterest(connection, false);
+            }
+            return;
+
+        case BufferedNetworkStream::Status::incomplete:
+            return;
+
+        case BufferedNetworkStream::Status::closed:
+            CloseAndDestroy(connection);
+            return;
+    }
 }
 
 
@@ -513,6 +539,7 @@ Server::Connection::Connection(IOUtils::AutoCloseableSocket socket) :
         interested_in_reads(false),
         interested_in_writes(false),
         read_state(ReadState::READING_MESSAGE_TYPE),
+        close_connection_after_all_buffers_have_been_flushed(false),
         incoming_message_type_buffer(4),
         incoming_magic_number_buffer(4),
         incoming_protocol_version_buffer(4),

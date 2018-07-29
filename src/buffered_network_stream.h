@@ -21,7 +21,7 @@ public:
      * remainder of the buffer), and `closed` if the stream was closed before
      * the buffer could be fully populated.
      */
-    Status Fill(Buffer& buffer);
+    Status Fill(Buffer* buffer);
 
     /*
      * Return `complete` if there was enough buffer space to fully consume the
@@ -30,7 +30,7 @@ public:
      * stream was closed before all of the buffer could be written out to the
      * stream.
      */
-    Status Write(Buffer& buffer);
+    Status Write(Buffer* buffer);
 
     /*
      * Returns `complete` if the entire write buffer has been flushed to the

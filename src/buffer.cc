@@ -73,16 +73,16 @@ void Buffer::Flip(void) {
 }
 
 
-void Buffer::FillFrom(Buffer& src) {
-    size_t bytes_to_copy = src.Remaining();
+void Buffer::FillFrom(Buffer* src) {
+    size_t bytes_to_copy = src->Remaining();
     size_t space_available = Remaining();
     if (space_available < bytes_to_copy) {
         bytes_to_copy = space_available;
     }
 
-    std::memcpy(data + position, src.data + src.position, bytes_to_copy);
+    std::memcpy(data + position, src->data + src->position, bytes_to_copy);
     position += bytes_to_copy;
-    src.position += bytes_to_copy;
+    src->position += bytes_to_copy;
 }
 
 

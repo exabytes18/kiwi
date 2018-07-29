@@ -1,0 +1,10 @@
+Error:
+    kiwidb(35587,0x700007644000) malloc: *** error for object 0x10090cd70: pointer being freed was not allocated
+    *** set a breakpoint in malloc_error_break to debug
+
+Debugging Steps:
+    lldb -- ./kiwi kiwidb.yaml
+    > br set --name malloc_error_break
+    > r
+    > up
+    > up
