@@ -152,3 +152,34 @@ int IOUtils::ListenSocket(SocketAddress const& address, bool use_ipv4, bool use_
 
     return fd;
 }
+
+
+IOUtils::AutoCloseableFD::AutoCloseableFD(int fd) noexcept : fd(fd) {
+}
+
+
+IOUtils::AutoCloseableFD::~AutoCloseableFD(void) noexcept {
+    if (fd != -1) {
+        Close(fd);
+    }
+}
+
+
+IOUtils::AutoCloseableFD::AutoCloseableFD(IOUtils::AutoCloseableFD&& other) noexcept : fd(other.fd) {
+    other.fd = -1;
+}
+
+
+IOUtils::AutoCloseableFD& IOUtils::AutoCloseableFD::operator=(IOUtils::AutoCloseableFD&& other) noexcept {
+    if (this == &other) {
+        return *this;
+    }
+
+    if (fd != -1) {
+        Close(fd);
+    }
+
+    fd = other.fd;
+    other.fd = -1;
+    return *this;
+}

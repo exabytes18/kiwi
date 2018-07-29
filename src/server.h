@@ -67,7 +67,7 @@ private:
     void RemoveFD(int fd, short filter);
     void RecvData(Connection* connection);
     void SendData(Connection* connection);
-    void PrepareForSendingErrorReply(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
+    void SendErrorReplyAndCloseConnection(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
     void WatchForWritability(Connection* connection, bool watch_for_writability);
     void CloseConnection(Connection* connection);
 };

@@ -8,7 +8,7 @@ KIWI_SERVER = ('127.0.0.1', 12312)
 
 def main():
     client_hello_struct = struct.Struct('> I I I')
-    client_hello = client_hello_struct.pack(1, 0xE6955EBF, 1)
+    client_hello = client_hello_struct.pack(0x40000000, 0xE6955EBF, 1)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(KIWI_SERVER)
