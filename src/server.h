@@ -69,10 +69,10 @@ private:
     void RemoveFD(int fd, short filter);
     void RecvData(Connection* connection);
     void SendData(Connection* connection);
-    void SendErrorReplyAndCloseConnection(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
+    void SendErrorReplyAndClose(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
     void SetReadInterest(Connection* connection, bool interested_in_reads);
     void SetWriteInterest(Connection* connection, bool interested_in_writes);
-    void CloseConnection(Connection* connection);
+    void Close(Connection* connection);
 };
 
 #endif  // KIWI_SERVER_H_

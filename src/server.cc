@@ -92,7 +92,6 @@ void Server::RemoveFD(int fd, short filter) {
 
 void Server::ThreadMain(void) {
 
-    auto incoming_server_id = config.ServerId();
     auto hosts = config.Hosts();
     auto bind_address = config.BindAddress();
     auto use_ipv4 = config.UseIPV4();
@@ -220,7 +219,7 @@ void Server::RecvData(Connection* connection) {
                                 break;
 
                             default:
-                                CloseConnection(connection);
+                                Close(connection);
                                 return;
                         }
                         break;
@@ -229,7 +228,7 @@ void Server::RecvData(Connection* connection) {
                         return;
 
                     case BufferedNetworkStream::Status::closed:
-                        CloseConnection(connection);
+                        Close(connection);
                         return;
                 }
                 break;
@@ -245,7 +244,7 @@ void Server::RecvData(Connection* connection) {
                             connection->read_state = Connection::ReadState::READING_CLIENT_HELLO_PROTOCOL_VERSION;
                         } else {
                             connection->read_state = Connection::ReadState::TERMINAL;
-                            SendErrorReplyAndCloseConnection(
+                            SendErrorReplyAndClose(
                                 connection,
                                 Protocol::ErrorCode::INVALID_MAGIC_NUMBER,
                                 Protocol::InvalidMagicNumberErrorMessage(connection->incoming_magic_number));
@@ -256,7 +255,7 @@ void Server::RecvData(Connection* connection) {
                         return;
 
                     case BufferedNetworkStream::Status::closed:
-                        CloseConnection(connection);
+                        Close(connection);
                         return;
                 }
                 break;
@@ -272,7 +271,7 @@ void Server::RecvData(Connection* connection) {
                             connection->read_state = Connection::ReadState::READING_MESSAGE_TYPE;
                         } else {
                             connection->read_state = Connection::ReadState::TERMINAL;
-                            SendErrorReplyAndCloseConnection(
+                            SendErrorReplyAndClose(
                                 connection,
                                 Protocol::ErrorCode::UNSUPPORTED_PROTOCOL_VERSION,
                                 Protocol::UnsupportedProtocolVersionErrorMessage(connection->incoming_protocol_version));
@@ -283,7 +282,7 @@ void Server::RecvData(Connection* connection) {
                         return;
 
                     case BufferedNetworkStream::Status::closed:
-                        CloseConnection(connection);
+                        Close(connection);
                         return;
                 }
                 break;
@@ -299,7 +298,7 @@ void Server::RecvData(Connection* connection) {
                             connection->read_state = Connection::ReadState::READING_SERVER_HELLO_PROTOCOL_VERSION;
                         } else {
                             connection->read_state = Connection::ReadState::TERMINAL;
-                            SendErrorReplyAndCloseConnection(
+                            SendErrorReplyAndClose(
                                 connection,
                                 Protocol::ErrorCode::INVALID_MAGIC_NUMBER,
                                 Protocol::InvalidMagicNumberErrorMessage(connection->incoming_magic_number));
@@ -310,7 +309,7 @@ void Server::RecvData(Connection* connection) {
                         return;
 
                     case BufferedNetworkStream::Status::closed:
-                        CloseConnection(connection);
+                        Close(connection);
                         return;
                 }
                 break;
@@ -326,7 +325,7 @@ void Server::RecvData(Connection* connection) {
                             connection->read_state = Connection::ReadState::READING_SERVER_HELLO_SERVER_ID;
                         } else {
                             connection->read_state = Connection::ReadState::TERMINAL;
-                            SendErrorReplyAndCloseConnection(
+                            SendErrorReplyAndClose(
                                 connection,
                                 Protocol::ErrorCode::UNSUPPORTED_PROTOCOL_VERSION,
                                 Protocol::UnsupportedProtocolVersionErrorMessage(connection->incoming_protocol_version));
@@ -337,7 +336,7 @@ void Server::RecvData(Connection* connection) {
                         return;
 
                     case BufferedNetworkStream::Status::closed:
-                        CloseConnection(connection);
+                        Close(connection);
                         return;
                 }
                 break;
@@ -356,7 +355,7 @@ void Server::RecvData(Connection* connection) {
                         return;
 
                     case BufferedNetworkStream::Status::closed:
-                        CloseConnection(connection);
+                        Close(connection);
                         return;
                 }
                 break;
@@ -375,7 +374,7 @@ void Server::RecvData(Connection* connection) {
                         return;
 
                     case BufferedNetworkStream::Status::closed:
-                        CloseConnection(connection);
+                        Close(connection);
                         return;
                 }
                 break;
@@ -394,7 +393,7 @@ void Server::RecvData(Connection* connection) {
                         return;
 
                     case BufferedNetworkStream::Status::closed:
-                        CloseConnection(connection);
+                        Close(connection);
                         return;
                 }
                 break;
@@ -415,7 +414,7 @@ void Server::SendData(Connection* connection) {
 }
 
 
-void Server::SendErrorReplyAndCloseConnection(
+void Server::SendErrorReplyAndClose(
         Connection* connection,
         Protocol::ErrorCode error_code,
         std::string error_message) {
@@ -446,7 +445,7 @@ void Server::SetWriteInterest(Connection* connection, bool interested_in_writes)
 }
 
 
-void Server::CloseConnection(Connection* connection) {
+void Server::Close(Connection* connection) {
     cout << "Closing connection" << endl;
     connections.erase(connection);
     delete connection;
