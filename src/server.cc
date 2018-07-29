@@ -92,7 +92,7 @@ void Server::RemoveFD(int fd, short filter) {
 
 void Server::ThreadMain(void) {
 
-    auto server_id = config.ServerId();
+    auto incoming_server_id = config.ServerId();
     auto hosts = config.Hosts();
     auto bind_address = config.BindAddress();
     auto use_ipv4 = config.UseIPV4();
@@ -162,7 +162,7 @@ void Server::ThreadMain(void) {
                             }
 
                             try {
-                                WatchForReadability(connection, true);
+                                SetReadInterest(connection, true);
                             } catch (...) {
                                 connections.erase(connection);
                                 delete connection;
@@ -203,19 +203,19 @@ void Server::RecvData(Connection* connection) {
         switch (connection->read_state) {
             case Connection::ReadState::READING_MESSAGE_TYPE:
                 cout << "READING_MESSAGE_TYPE" << endl;
-                switch (connection->stream.Fill(connection->message_type_buffer)) {
+                switch (connection->stream.Fill(connection->incoming_message_type_buffer)) {
                     case BufferedNetworkStream::Status::complete:
-                        connection->message_type_buffer.Flip();
-                        connection->message_type_int = connection->message_type_buffer.UnsafeGetInt();
-                        connection->message_type_buffer.Clear();
-                        switch (connection->message_type_int) {
+                        connection->incoming_message_type_buffer.Flip();
+                        connection->incoming_message_type_int = connection->incoming_message_type_buffer.UnsafeGetInt();
+                        connection->incoming_message_type_buffer.Clear();
+                        switch (connection->incoming_message_type_int) {
                             case Protocol::MessageType::CLIENT_HELLO:
-                                connection->message_type = Protocol::MessageType::CLIENT_HELLO;
+                                connection->incoming_message_type = Protocol::MessageType::CLIENT_HELLO;
                                 connection->read_state = Connection::ReadState::READING_CLIENT_HELLO_MAGIC_NUMBER;
                                 break;
 
                             case Protocol::MessageType::SERVER_HELLO:
-                                connection->message_type = Protocol::MessageType::SERVER_HELLO;
+                                connection->incoming_message_type = Protocol::MessageType::SERVER_HELLO;
                                 connection->read_state = Connection::ReadState::READING_SERVER_HELLO_MAGIC_NUMBER;
                                 break;
 
@@ -236,19 +236,19 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_CLIENT_HELLO_MAGIC_NUMBER:
                 cout << "READING_CLIENT_HELLO_MAGIC_NUMBER" << endl;
-                switch (connection->stream.Fill(connection->magic_number_buffer)) {
+                switch (connection->stream.Fill(connection->incoming_magic_number_buffer)) {
                     case BufferedNetworkStream::Status::complete:
-                        connection->magic_number_buffer.Flip();
-                        connection->magic_number = connection->magic_number_buffer.UnsafeGetInt();
-                        connection->magic_number_buffer.Clear();
-                        if (connection->magic_number == Protocol::MAGIC_NUMBER) {
+                        connection->incoming_magic_number_buffer.Flip();
+                        connection->incoming_magic_number = connection->incoming_magic_number_buffer.UnsafeGetInt();
+                        connection->incoming_magic_number_buffer.Clear();
+                        if (connection->incoming_magic_number == Protocol::MAGIC_NUMBER) {
                             connection->read_state = Connection::ReadState::READING_CLIENT_HELLO_PROTOCOL_VERSION;
                         } else {
                             connection->read_state = Connection::ReadState::TERMINAL;
                             SendErrorReplyAndCloseConnection(
                                 connection,
                                 Protocol::ErrorCode::INVALID_MAGIC_NUMBER,
-                                Protocol::InvalidMagicNumberErrorMessage(connection->magic_number));
+                                Protocol::InvalidMagicNumberErrorMessage(connection->incoming_magic_number));
                         }
                         break;
 
@@ -263,19 +263,19 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_CLIENT_HELLO_PROTOCOL_VERSION:
                 cout << "READING_CLIENT_HELLO_PROTOCOL_VERSION" << endl;
-                switch (connection->stream.Fill(connection->protocol_version_buffer)) {
+                switch (connection->stream.Fill(connection->incoming_protocol_version_buffer)) {
                     case BufferedNetworkStream::Status::complete:
-                        connection->protocol_version_buffer.Flip();
-                        connection->protocol_version = connection->protocol_version_buffer.UnsafeGetInt();
-                        connection->protocol_version_buffer.Clear();
-                        if (connection->protocol_version == Protocol::PROTOCOL_VERSION) {
+                        connection->incoming_protocol_version_buffer.Flip();
+                        connection->incoming_protocol_version = connection->incoming_protocol_version_buffer.UnsafeGetInt();
+                        connection->incoming_protocol_version_buffer.Clear();
+                        if (connection->incoming_protocol_version == Protocol::PROTOCOL_VERSION) {
                             connection->read_state = Connection::ReadState::READING_MESSAGE_TYPE;
                         } else {
                             connection->read_state = Connection::ReadState::TERMINAL;
                             SendErrorReplyAndCloseConnection(
                                 connection,
                                 Protocol::ErrorCode::UNSUPPORTED_PROTOCOL_VERSION,
-                                Protocol::UnsupportedProtocolVersionErrorMessage(connection->protocol_version));
+                                Protocol::UnsupportedProtocolVersionErrorMessage(connection->incoming_protocol_version));
                         }
                         break;
 
@@ -290,19 +290,19 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_MAGIC_NUMBER:
                 cout << "READING_SERVER_HELLO_MAGIC_NUMBER" << endl;
-                switch (connection->stream.Fill(connection->magic_number_buffer)) {
+                switch (connection->stream.Fill(connection->incoming_magic_number_buffer)) {
                     case BufferedNetworkStream::Status::complete:
-                        connection->magic_number_buffer.Flip();
-                        connection->magic_number = connection->magic_number_buffer.UnsafeGetInt();
-                        connection->magic_number_buffer.Clear();
-                        if (connection->magic_number == Protocol::MAGIC_NUMBER) {
+                        connection->incoming_magic_number_buffer.Flip();
+                        connection->incoming_magic_number = connection->incoming_magic_number_buffer.UnsafeGetInt();
+                        connection->incoming_magic_number_buffer.Clear();
+                        if (connection->incoming_magic_number == Protocol::MAGIC_NUMBER) {
                             connection->read_state = Connection::ReadState::READING_SERVER_HELLO_PROTOCOL_VERSION;
                         } else {
                             connection->read_state = Connection::ReadState::TERMINAL;
                             SendErrorReplyAndCloseConnection(
                                 connection,
                                 Protocol::ErrorCode::INVALID_MAGIC_NUMBER,
-                                Protocol::InvalidMagicNumberErrorMessage(connection->magic_number));
+                                Protocol::InvalidMagicNumberErrorMessage(connection->incoming_magic_number));
                         }
                         break;
 
@@ -317,19 +317,19 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_PROTOCOL_VERSION:
                 cout << "READING_SERVER_HELLO_PROTOCOL_VERSION" << endl;
-                switch (connection->stream.Fill(connection->protocol_version_buffer)) {
+                switch (connection->stream.Fill(connection->incoming_protocol_version_buffer)) {
                     case BufferedNetworkStream::Status::complete:
-                        connection->protocol_version_buffer.Flip();
-                        connection->protocol_version = connection->protocol_version_buffer.UnsafeGetInt();
-                        connection->protocol_version_buffer.Clear();
-                        if (connection->protocol_version == Protocol::PROTOCOL_VERSION) {
+                        connection->incoming_protocol_version_buffer.Flip();
+                        connection->incoming_protocol_version = connection->incoming_protocol_version_buffer.UnsafeGetInt();
+                        connection->incoming_protocol_version_buffer.Clear();
+                        if (connection->incoming_protocol_version == Protocol::PROTOCOL_VERSION) {
                             connection->read_state = Connection::ReadState::READING_SERVER_HELLO_SERVER_ID;
                         } else {
                             connection->read_state = Connection::ReadState::TERMINAL;
                             SendErrorReplyAndCloseConnection(
                                 connection,
                                 Protocol::ErrorCode::UNSUPPORTED_PROTOCOL_VERSION,
-                                Protocol::UnsupportedProtocolVersionErrorMessage(connection->protocol_version));
+                                Protocol::UnsupportedProtocolVersionErrorMessage(connection->incoming_protocol_version));
                         }
                         break;
 
@@ -344,11 +344,11 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_SERVER_ID:
                 cout << "READING_SERVER_HELLO_SERVER_ID" << endl;
-                switch (connection->stream.Fill(connection->server_id_buffer)) {
+                switch (connection->stream.Fill(connection->incoming_server_id_buffer)) {
                     case BufferedNetworkStream::Status::complete:
-                        connection->server_id_buffer.Flip();
-                        connection->server_id = connection->server_id_buffer.UnsafeGetInt();
-                        connection->server_id_buffer.Clear();
+                        connection->incoming_server_id_buffer.Flip();
+                        connection->incoming_server_id = connection->incoming_server_id_buffer.UnsafeGetInt();
+                        connection->incoming_server_id_buffer.Clear();
                         connection->read_state = Connection::ReadState::READING_SERVER_HELLO_CLUSTER_NAME_LENGTH;
                         break;
 
@@ -363,11 +363,11 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_CLUSTER_NAME_LENGTH:
                 cout << "READING_SERVER_HELLO_CLUSTER_NAME_LENGTH" << endl;
-                switch (connection->stream.Fill(connection->cluster_name_length_buffer)) {
+                switch (connection->stream.Fill(connection->incoming_cluster_name_length_buffer)) {
                     case BufferedNetworkStream::Status::complete:
-                        connection->cluster_name_length_buffer.Flip();
-                        connection->cluster_name_length = connection->cluster_name_length_buffer.UnsafeGetShort();
-                        connection->cluster_name_buffer.ResetAndGrow(connection->cluster_name_length);
+                        connection->incoming_cluster_name_length_buffer.Flip();
+                        connection->incoming_cluster_name_length = connection->incoming_cluster_name_length_buffer.UnsafeGetShort();
+                        connection->incoming_cluster_name_buffer.ResetAndGrow(connection->incoming_cluster_name_length);
                         connection->read_state = Connection::ReadState::READING_SERVER_HELLO_CLUSTER_NAME;
                         break;
 
@@ -382,11 +382,11 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_CLUSTER_NAME:
                 cout << "READING_SERVER_HELLO_CLUSTER_NAME" << endl;
-                switch (connection->stream.Fill(connection->cluster_name_buffer)) {
+                switch (connection->stream.Fill(connection->incoming_cluster_name_buffer)) {
                     case BufferedNetworkStream::Status::complete:
-                        connection->cluster_name_buffer.Flip();
-                        connection->cluster_name = connection->cluster_name_buffer.UnsafeGetString(connection->cluster_name_length);
-                        connection->cluster_name_buffer.Clear();
+                        connection->incoming_cluster_name_buffer.Flip();
+                        connection->incoming_cluster_name = connection->incoming_cluster_name_buffer.UnsafeGetString(connection->incoming_cluster_name_length);
+                        connection->incoming_cluster_name_buffer.Clear();
                         connection->read_state = Connection::ReadState::READING_MESSAGE_TYPE;
                         break;
 
@@ -422,26 +422,26 @@ void Server::SendErrorReplyAndCloseConnection(
 }
 
 
-void Server::WatchForReadability(Connection* connection, bool watch_for_readability) {
-    if (connection->watching_for_readability != watch_for_readability) {
-        if (watch_for_readability) {
+void Server::SetReadInterest(Connection* connection, bool interested_in_reads) {
+    if (connection->interested_in_reads != interested_in_reads) {
+        if (interested_in_reads) {
             AddFD(connection->stream.GetFD(), EVFILT_READ, connection);
         } else {
             RemoveFD(connection->stream.GetFD(), EVFILT_READ);
         }
-        connection->watching_for_readability = watch_for_readability;
+        connection->interested_in_reads = interested_in_reads;
     }
 }
 
 
-void Server::WatchForWritability(Connection* connection, bool watch_for_writability) {
-    if (connection->watching_for_writability != watch_for_writability) {
-        if (watch_for_writability) {
+void Server::SetWriteInterest(Connection* connection, bool interested_in_writes) {
+    if (connection->interested_in_writes != interested_in_writes) {
+        if (interested_in_writes) {
             AddFD(connection->stream.GetFD(), EVFILT_WRITE, connection);
         } else {
             RemoveFD(connection->stream.GetFD(), EVFILT_WRITE);
         }
-        connection->watching_for_writability = watch_for_writability;
+        connection->interested_in_writes = interested_in_writes;
     }
 }
 
@@ -455,15 +455,15 @@ void Server::CloseConnection(Connection* connection) {
 
 Server::Connection::Connection(IOUtils::AutoCloseableSocket socket) :
         stream(move(socket)),
-        watching_for_readability(false),
-        watching_for_writability(false),
+        interested_in_reads(false),
+        interested_in_writes(false),
         read_state(ReadState::READING_MESSAGE_TYPE),
-        message_type_buffer(4),
-        magic_number_buffer(4),
-        protocol_version_buffer(4),
-        server_id_buffer(4),
-        cluster_name_length_buffer(2),
-        cluster_name_buffer(0) {
+        incoming_message_type_buffer(4),
+        incoming_magic_number_buffer(4),
+        incoming_protocol_version_buffer(4),
+        incoming_server_id_buffer(4),
+        incoming_cluster_name_length_buffer(2),
+        incoming_cluster_name_buffer(0) {
 }
 
 

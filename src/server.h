@@ -33,28 +33,28 @@ private:
         };
 
         BufferedNetworkStream stream;
-        bool watching_for_readability;
-        bool watching_for_writability;
+        bool interested_in_reads;
+        bool interested_in_writes;
         ReadState read_state;
 
-        Buffer message_type_buffer;
-        uint32_t message_type_int;
-        Protocol::MessageType message_type;
+        Buffer incoming_message_type_buffer;
+        uint32_t incoming_message_type_int;
+        Protocol::MessageType incoming_message_type;
 
-        Buffer magic_number_buffer;
-        uint32_t magic_number;
+        Buffer incoming_magic_number_buffer;
+        uint32_t incoming_magic_number;
 
-        Buffer protocol_version_buffer;
-        uint32_t protocol_version;
+        Buffer incoming_protocol_version_buffer;
+        uint32_t incoming_protocol_version;
 
-        Buffer server_id_buffer;
-        uint32_t server_id;
+        Buffer incoming_server_id_buffer;
+        uint32_t incoming_server_id;
 
-        Buffer cluster_name_length_buffer;
-        uint16_t cluster_name_length;
+        Buffer incoming_cluster_name_length_buffer;
+        uint16_t incoming_cluster_name_length;
 
-        Buffer cluster_name_buffer;
-        std::string cluster_name;
+        Buffer incoming_cluster_name_buffer;
+        std::string incoming_cluster_name;
     };
 
     ServerConfig const& config;
@@ -70,8 +70,8 @@ private:
     void RecvData(Connection* connection);
     void SendData(Connection* connection);
     void SendErrorReplyAndCloseConnection(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
-    void WatchForReadability(Connection* connection, bool watch_for_readability);
-    void WatchForWritability(Connection* connection, bool watch_for_writability);
+    void SetReadInterest(Connection* connection, bool interested_in_reads);
+    void SetWriteInterest(Connection* connection, bool interested_in_writes);
     void CloseConnection(Connection* connection);
 };
 
