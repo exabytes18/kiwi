@@ -98,15 +98,11 @@ void Server::ThreadMain(void) {
     auto use_ipv4 = config.UseIPV4();
     auto use_ipv6 = config.UseIPV6();
 
-    int listen_fd = IOUtils::ListenSocket(
-        bind_address,
-        use_ipv4,
-        use_ipv6,
-        128);
+    IOUtils::AutoCloseableSocket listen_socket =
+        IOUtils::CreateListenSocket(bind_address, use_ipv4, use_ipv6, 128);
 
-    IOUtils::AutoCloseableFD auto_closeable_listen_fd(listen_fd);
-    IOUtils::SetNonBlocking(listen_fd);
-    AddFD(listen_fd, EVFILT_READ, nullptr);
+    listen_socket.SetNonBlocking();
+    AddFD(listen_socket.GetFD(), EVFILT_READ, nullptr);
 
     // Start connection attempts for all higher-numbered peers
 
@@ -137,7 +133,7 @@ void Server::ThreadMain(void) {
                 }
             } else {
                 int ready_fd = event->ident;
-                if (ready_fd == listen_fd) {
+                if (ready_fd == listen_socket.GetFD()) {
                     /*
                      * Accept up to 64 connections before looping again. This ensures that we don't live-lock
                      * during shutdown.
@@ -145,8 +141,8 @@ void Server::ThreadMain(void) {
                     for (int i = 0; i < 64; i++) {
                         struct sockaddr_storage sockaddr;
                         socklen_t address_len = sizeof(sockaddr);
-                        int fd = accept(listen_fd, (struct sockaddr *)&sockaddr, &address_len);
-                        if (fd == -1) {
+                        IOUtils::AutoCloseableSocket socket(accept(listen_socket.GetFD(), (struct sockaddr *)&sockaddr, &address_len));
+                        if (socket.GetFD() == -1) {
                             if (errno == EINTR) {
                                 continue;
                             } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -157,13 +153,7 @@ void Server::ThreadMain(void) {
                                 break;
                             }
                         } else {
-                            Connection* connection;
-                            try {
-                                connection = new Connection(fd);
-                            } catch (...) {
-                                IOUtils::Close(fd);
-                                throw;
-                            }
+                            Connection* connection = new Connection(move(socket));
 
                             try {
                                 connections.insert(connection);
@@ -172,7 +162,7 @@ void Server::ThreadMain(void) {
                             }
 
                             try {
-                                AddFD(fd, EVFILT_READ, connection);
+                                WatchForReadability(connection, true);
                             } catch (...) {
                                 connections.erase(connection);
                                 delete connection;
@@ -432,10 +422,22 @@ void Server::SendErrorReplyAndCloseConnection(
 }
 
 
+void Server::WatchForReadability(Connection* connection, bool watch_for_readability) {
+    if (connection->watching_for_readability != watch_for_readability) {
+        if (watch_for_readability) {
+            AddFD(connection->stream.GetFD(), EVFILT_READ, connection);
+        } else {
+            RemoveFD(connection->stream.GetFD(), EVFILT_READ);
+        }
+        connection->watching_for_readability = watch_for_readability;
+    }
+}
+
+
 void Server::WatchForWritability(Connection* connection, bool watch_for_writability) {
     if (connection->watching_for_writability != watch_for_writability) {
         if (watch_for_writability) {
-            AddFD(connection->stream.GetFD(), EVFILT_WRITE, this);
+            AddFD(connection->stream.GetFD(), EVFILT_WRITE, connection);
         } else {
             RemoveFD(connection->stream.GetFD(), EVFILT_WRITE);
         }
@@ -451,8 +453,9 @@ void Server::CloseConnection(Connection* connection) {
 }
 
 
-Server::Connection::Connection(int fd) :
-        stream(fd),
+Server::Connection::Connection(IOUtils::AutoCloseableSocket socket) :
+        stream(move(socket)),
+        watching_for_readability(false),
         watching_for_writability(false),
         read_state(ReadState::READING_MESSAGE_TYPE),
         message_type_buffer(4),
@@ -461,8 +464,6 @@ Server::Connection::Connection(int fd) :
         server_id_buffer(4),
         cluster_name_length_buffer(2),
         cluster_name_buffer(0) {
-
-    IOUtils::SetNonBlocking(fd);
 }
 
 

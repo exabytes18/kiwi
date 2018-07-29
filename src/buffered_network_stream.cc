@@ -9,23 +9,22 @@
 
 using namespace std;
 
-BufferedNetworkStream::BufferedNetworkStream(int fd) :
-        fd(fd),
+BufferedNetworkStream::BufferedNetworkStream(IOUtils::AutoCloseableSocket socket) :
+        socket(move(socket)),
         read_buffer(64 * 1024),
         write_buffer(64 * 1024),
         flushing_in_progress(false) {
+    this->socket.SetNonBlocking();
     read_buffer.Flip();
 }
 
 
 BufferedNetworkStream::~BufferedNetworkStream(void) {
-    // TODO: verify that the read_buffer gets deleted automatically
-    IOUtils::Close(fd);
 }
 
 
 int BufferedNetworkStream::GetFD(void) {
-    return fd;
+    return socket.GetFD();
 }
 
 
@@ -35,7 +34,7 @@ BufferedNetworkStream::Status BufferedNetworkStream::Fill(Buffer& buffer) {
         if (read_buffer.Remaining() == 0) {
             auto data = read_buffer.Data();
             auto capacity = read_buffer.Capacity();
-            auto bytes_read = recv(fd, data, capacity, 0);
+            auto bytes_read = recv(socket.GetFD(), data, capacity, 0);
             if (bytes_read == -1) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     break;
@@ -95,7 +94,7 @@ BufferedNetworkStream::Status BufferedNetworkStream::Flush(void) {
         auto data  = write_buffer.Data();
         auto position = write_buffer.Position();
         auto remaining = write_buffer.Remaining();
-        auto bytes_written = send(fd, data + position, remaining, 0);
+        auto bytes_written = send(socket.GetFD(), data + position, remaining, 0);
         if (bytes_written == -1) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 break;

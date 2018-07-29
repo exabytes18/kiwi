@@ -3,6 +3,7 @@
 
 #include <set>
 #include "buffered_network_stream.h"
+#include "io_utils.h"
 #include "protocol.h"
 #include "server_config.h"
 #include "storage.h"
@@ -16,7 +17,7 @@ public:
 private:
     class Connection {
     public:
-        Connection(int fd);
+        Connection(IOUtils::AutoCloseableSocket socket);
         ~Connection(void);
 
         enum class ReadState {
@@ -32,6 +33,7 @@ private:
         };
 
         BufferedNetworkStream stream;
+        bool watching_for_readability;
         bool watching_for_writability;
         ReadState read_state;
 
@@ -68,6 +70,7 @@ private:
     void RecvData(Connection* connection);
     void SendData(Connection* connection);
     void SendErrorReplyAndCloseConnection(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
+    void WatchForReadability(Connection* connection, bool watch_for_readability);
     void WatchForWritability(Connection* connection, bool watch_for_writability);
     void CloseConnection(Connection* connection);
 };

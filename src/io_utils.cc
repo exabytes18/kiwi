@@ -50,65 +50,36 @@ void IOUtils::ForceWriteByte(int fd, char c) noexcept {
 }
 
 
-void IOUtils::SetNonBlocking(int fd) {
-    for (;;) {
-        int existing_flags = fcntl(fd, F_GETFL);
-        if (existing_flags == -1) {
-            if (errno == EINTR) {
-                continue;
-            } else {
-                std::cerr << "Problem fetching fd flags: " << strerror(errno) << std::endl;
-                abort();
-            }
-        }
-
-        int updated_flags = fcntl(fd, F_SETFL, existing_flags | O_NONBLOCK);
-        if (updated_flags == -1) {
-            if (errno == EINTR) {
-                continue;
-            } else {
-                std::cerr << "Problem setting fd flags: " << strerror(errno) << std::endl;
-                abort();
-            }
-        }
-        return;
-    }
-}
-
-
-static int OpenAndBindSocket(struct addrinfo* addrs) {
+static IOUtils::AutoCloseableSocket OpenAndBindSocket(struct addrinfo* addrs) {
     if (addrs == nullptr) {
         throw IOException("No addresses found");
     }
 
-    int fd;
     struct addrinfo* addr;
     for (addr = addrs; addr != nullptr; addr = addr->ai_next) {
-        fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-        if (fd == -1) {
+        IOUtils::AutoCloseableSocket s(socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol));
+        if (s.GetFD() == -1) {
             continue;
         }
 
         int optval = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
+        if (setsockopt(s.GetFD(), SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
             std::cerr << "WARNING: problem setting SO_REUSEADDR: " << strerror(errno) << std::endl;
             abort();
         }
 
-        if (bind(fd, addr->ai_addr, addr->ai_addrlen) == -1) {
-            int bind_errno = errno;
-            IOUtils::Close(fd);
-            throw IOException("Problem binding socket: " + std::string(strerror(bind_errno)));
+        if (bind(s.GetFD(), addr->ai_addr, addr->ai_addrlen) == -1) {
+            throw IOException("Problem binding socket: " + std::string(strerror(errno)));
         }
 
-        return fd;
+        return s;
     }
 
     throw IOException("Unable to create socket: " + std::string(strerror(errno)));
 }
 
 
-int IOUtils::ListenSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6, int backlog) {
+static IOUtils::AutoCloseableSocket OpenAndBindSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6) {
     int ai_family;
     if (use_ipv4 && use_ipv6) {
         ai_family = AF_UNSPEC;
@@ -136,41 +107,43 @@ int IOUtils::ListenSocket(SocketAddress const& address, bool use_ipv4, bool use_
         throw DnsResolutionException("getaddrinfo: " + std::string(gai_strerror(err)));
     }
 
-    int fd;
     try {
-        fd = OpenAndBindSocket(addrs);
+        IOUtils::AutoCloseableSocket socket = OpenAndBindSocket(addrs);
+        freeaddrinfo(addrs);
+        return socket;
     } catch (...) {
         freeaddrinfo(addrs);
         throw;
     }
-    freeaddrinfo(addrs);
+}
 
-    if (listen(fd, backlog) != 0) {
-        Close(fd);
+
+IOUtils::AutoCloseableSocket IOUtils::CreateListenSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6, int backlog) {
+    IOUtils::AutoCloseableSocket socket = OpenAndBindSocket(address, use_ipv4, use_ipv6);
+    if (listen(socket.GetFD(), backlog) != 0) {
         throw IOException("Problem listening to socket: " + std::string(strerror(errno)));
     }
-
-    return fd;
+    return socket;
 }
 
 
-IOUtils::AutoCloseableFD::AutoCloseableFD(int fd) noexcept : fd(fd) {
+IOUtils::AutoCloseableSocket::AutoCloseableSocket(int fd) noexcept : fd(fd) {
 }
 
 
-IOUtils::AutoCloseableFD::~AutoCloseableFD(void) noexcept {
+IOUtils::AutoCloseableSocket::~AutoCloseableSocket(void) noexcept {
     if (fd != -1) {
         Close(fd);
     }
 }
 
 
-IOUtils::AutoCloseableFD::AutoCloseableFD(IOUtils::AutoCloseableFD&& other) noexcept : fd(other.fd) {
+IOUtils::AutoCloseableSocket::AutoCloseableSocket(IOUtils::AutoCloseableSocket&& other) noexcept : fd(other.fd) {
     other.fd = -1;
 }
 
 
-IOUtils::AutoCloseableFD& IOUtils::AutoCloseableFD::operator=(IOUtils::AutoCloseableFD&& other) noexcept {
+IOUtils::AutoCloseableSocket& IOUtils::AutoCloseableSocket::operator=(IOUtils::AutoCloseableSocket&& other) noexcept {
     if (this == &other) {
         return *this;
     }
@@ -182,4 +155,35 @@ IOUtils::AutoCloseableFD& IOUtils::AutoCloseableFD::operator=(IOUtils::AutoClose
     fd = other.fd;
     other.fd = -1;
     return *this;
+}
+
+
+int IOUtils::AutoCloseableSocket::GetFD(void) noexcept {
+    return fd;
+}
+
+
+void IOUtils::AutoCloseableSocket::SetNonBlocking(void) noexcept {
+    for (;;) {
+        int existing_flags = fcntl(fd, F_GETFL);
+        if (existing_flags == -1) {
+            if (errno == EINTR) {
+                continue;
+            } else {
+                std::cerr << "Problem fetching fd flags: " << strerror(errno) << std::endl;
+                abort();
+            }
+        }
+
+        int updated_flags = fcntl(fd, F_SETFL, existing_flags | O_NONBLOCK);
+        if (updated_flags == -1) {
+            if (errno == EINTR) {
+                continue;
+            } else {
+                std::cerr << "Problem setting fd flags: " << strerror(errno) << std::endl;
+                abort();
+            }
+        }
+        return;
+    }
 }

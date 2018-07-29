@@ -3,13 +3,14 @@
 
 #include <stddef.h>
 #include "buffer.h"
+#include "io_utils.h"
 
 
 class BufferedNetworkStream {
 public:
     enum class Status { complete, incomplete, closed };
 
-    BufferedNetworkStream(int fd);
+    BufferedNetworkStream(IOUtils::AutoCloseableSocket socket);
     ~BufferedNetworkStream(void);
     int GetFD(void);
 
@@ -41,7 +42,7 @@ public:
     Status Flush(void);
 
 private:
-    int fd;
+    IOUtils::AutoCloseableSocket socket;
     Buffer read_buffer;
     Buffer write_buffer;
     bool flushing_in_progress;
