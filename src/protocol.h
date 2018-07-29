@@ -24,10 +24,12 @@ namespace Protocol {
         OK = 0,
         INVALID_MAGIC_NUMBER = 1,
         UNSUPPORTED_PROTOCOL_VERSION = 2,
+        CLUSTER_NAME_MISMATCH = 3,
     };
 
-    std::string InvalidMagicNumberErrorMessage(uint32_t magic_number);
-    std::string UnsupportedProtocolVersionErrorMessage(uint32_t protocol_version);
+    std::string InvalidMagicNumberErrorMessage(uint32_t invalid_magic_number);
+    std::string UnsupportedProtocolVersionErrorMessage(uint32_t invalid_protocol_version);
+    std::string ClusterNameMismatchErrorMessage(void);
 }
 
 #endif  // KIWI_PROTOCOL_H_

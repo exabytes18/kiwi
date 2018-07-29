@@ -1,6 +1,7 @@
 #ifndef KIWI_SERVER_H_
 #define KIWI_SERVER_H_
 
+#include <deque>
 #include <set>
 #include "buffered_network_stream.h"
 #include "io_utils.h"
@@ -32,29 +33,25 @@ private:
             TERMINAL,
         };
 
+        // High-level connection state
         BufferedNetworkStream stream;
         bool interested_in_reads;
         bool interested_in_writes;
         ReadState read_state;
 
+        // Server Connection Data
+        uint32_t server_id;
+
+        // Temporary buffers for incoming data
         Buffer incoming_message_type_buffer;
-        uint32_t incoming_message_type_int;
-        Protocol::MessageType incoming_message_type;
-
         Buffer incoming_magic_number_buffer;
-        uint32_t incoming_magic_number;
-
         Buffer incoming_protocol_version_buffer;
-        uint32_t incoming_protocol_version;
-
         Buffer incoming_server_id_buffer;
-        uint32_t incoming_server_id;
-
         Buffer incoming_cluster_name_length_buffer;
-        uint16_t incoming_cluster_name_length;
-
         Buffer incoming_cluster_name_buffer;
-        std::string incoming_cluster_name;
+
+        // Temporary buffers for outgoing data
+        std::deque<Buffer> outgoing_buffers;
     };
 
     ServerConfig const& config;
@@ -69,10 +66,10 @@ private:
     void RemoveFD(int fd, short filter);
     void RecvData(Connection* connection);
     void SendData(Connection* connection);
-    void SendErrorReplyAndClose(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
+    void StopReadingAndSendErrorReplyAndClose(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
     void SetReadInterest(Connection* connection, bool interested_in_reads);
     void SetWriteInterest(Connection* connection, bool interested_in_writes);
-    void Close(Connection* connection);
+    void CloseAndDestroy(Connection* connection);
 };
 
 #endif  // KIWI_SERVER_H_

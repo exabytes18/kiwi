@@ -107,3 +107,24 @@ std::string Buffer::UnsafeGetString(size_t length) {
     position += length;
     return value;
 }
+
+
+void Buffer::UnsafePutInt(uint32_t value) {
+    uint32_t network_order_value = htonl(value);
+    std::memcpy(data + position, &network_order_value, 4);
+    position += 4;
+}
+
+
+void Buffer::UnsafePutShort(uint16_t value) {
+    uint16_t network_order_value = htons(value);
+    std::memcpy(data + position, &network_order_value, 2);
+    position += 2;
+}
+
+
+void Buffer::UnsafePutString(std::string value) {
+    size_t length = value.length();
+    std::memcpy(data + position, value.data(), length);
+    position += length;
+}

@@ -62,24 +62,26 @@ BufferedNetworkStream::Status BufferedNetworkStream::Fill(Buffer& buffer) {
 
 BufferedNetworkStream::Status BufferedNetworkStream::Write(Buffer& buffer) {
     if (flushing_in_progress) {
-        return Status::incomplete;
-    } else {
-        while (buffer.Remaining() > 0) {
-            write_buffer.FillFrom(buffer);
-            if (write_buffer.Remaining() == 0) {
-                Status status = Flush();
-                // TODO: I don't like this logic.. could break too easily if we add more enum values or something.
-                if (status == Status::closed || status == Status::incomplete) {
-                    return status;
-                }
+        Status status = Flush();
+        if (status != Status::complete) {
+            return status;
+        }
+    }
+
+    while (buffer.Remaining() > 0) {
+        write_buffer.FillFrom(buffer);
+        if (write_buffer.Remaining() == 0) {
+            Status status = Flush();
+            if (status != Status::complete) {
+                return status;
             }
         }
+    }
 
-        if (buffer.Remaining() == 0) {
-            return Status::complete;
-        } else {
-            return Status::incomplete;
-        }
+    if (buffer.Remaining() == 0) {
+        return Status::complete;
+    } else {
+        return Status::incomplete;
     }
 }
 

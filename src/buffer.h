@@ -34,6 +34,10 @@ public:
     uint16_t UnsafeGetShort(void);
     std::string UnsafeGetString(size_t length);
 
+    void UnsafePutInt(uint32_t value);
+    void UnsafePutShort(uint16_t value);
+    void UnsafePutString(std::string value);
+
 private:
     size_t position;
     size_t limit;
