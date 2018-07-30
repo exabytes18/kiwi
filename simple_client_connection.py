@@ -16,7 +16,7 @@ def client_hello():
         sock.send(client_hello)
 
         response_data = sock.recv(64*1024)
-        message_type, = struct.unpack('> I', response_data)
+        message_type, = struct.unpack_from('> I', response_data)
         assert message_type == 0x40000001, "Expected message_type = %s, got %s instead" % (0x40000001, message_type)
 
 
