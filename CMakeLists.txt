@@ -4,7 +4,9 @@ project (kiwi)
 set (kiwi_VERSION_MAJOR 1)
 set (kiwi_VERSION_MINOR 0)
 
-file(GLOB SOURCES src/*.cc)
+file(GLOB COMMON_SOURCES src/common/*.cc)
+file(GLOB SERVER_SOURCES src/server/*.cc)
+file(GLOB CLIENT_PROTOCOL_PERFORMANCE_TEST_SOURCES src/client-protocol-performance-test/*.cc)
 
 include_directories("${PROJECT_SOURCE_DIR}/src")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
@@ -19,7 +21,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 # declare our executable
-add_executable(kiwidb ${SOURCES})
+add_executable(kiwidb-server ${COMMON_SOURCES} ${SERVER_SOURCES})
+add_executable(kiwidb-client-protocol-performance-test ${COMMON_SOURCES} ${CLIENT_PROTOCOL_PERFORMANCE_TEST_SOURCES})
 
 # Use jemalloc
 option(WITH_JEMALLOC "build with jemalloc" OFF)
@@ -45,39 +48,39 @@ endif ()
 # pthreads
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
-target_link_libraries(kiwidb ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(kiwidb-server ${CMAKE_THREAD_LIBS_INIT})
 
 # yaml-cpp
 find_package(yaml-cpp REQUIRED)
 include_directories(${YAML_CPP_INCLUDE_DIR})
-target_link_libraries(kiwidb ${YAML_CPP_LIBRARIES})
+target_link_libraries(kiwidb-server ${YAML_CPP_LIBRARIES})
 
 # rocksdb
 find_package(rocksdb REQUIRED)
 include_directories(${ROCKSDB_INCLUDE_DIR})
-target_link_libraries(kiwidb ${ROCKSDB_LIBRARIES})
+target_link_libraries(kiwidb-server ${ROCKSDB_LIBRARIES})
 
 # bz2 (needed for rocksdb)
 find_package(bz2 REQUIRED)
-target_link_libraries(kiwidb ${BZ2_LIBRARIES})
+target_link_libraries(kiwidb-server ${BZ2_LIBRARIES})
 
 # lz4 (needed for rocksdb)
 find_package(lz4 REQUIRED)
-target_link_libraries(kiwidb ${LZ4_LIBRARIES})
+target_link_libraries(kiwidb-server ${LZ4_LIBRARIES})
 
 # snappy (needed for rocksdb)
 find_package(snappy REQUIRED)
-target_link_libraries(kiwidb ${SNAPPY_LIBRARIES})
+target_link_libraries(kiwidb-server ${SNAPPY_LIBRARIES})
 
 # zlib (needed for rocksdb)
 find_package(zlib REQUIRED)
-target_link_libraries(kiwidb ${ZLIB_LIBRARIES})
+target_link_libraries(kiwidb-server ${ZLIB_LIBRARIES})
 
 # zstd (needed for rocksdb)
 find_package(zstd REQUIRED)
-target_link_libraries(kiwidb ${ZSTD_LIBRARIES})
+target_link_libraries(kiwidb-server ${ZSTD_LIBRARIES})
 
 configure_file (
-  "${PROJECT_SOURCE_DIR}/src/config.h.in"
-  "${PROJECT_SOURCE_DIR}/src/config.h"
+  "${PROJECT_SOURCE_DIR}/src/common/config.h.in"
+  "${PROJECT_SOURCE_DIR}/src/common/config.h"
 )

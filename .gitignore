@@ -5,7 +5,8 @@ cmake_install.cmake
 config.h
 
 # binaries
-kiwidb
+kiwidb-server
+kiwidb-client-protocol-performance-test
 
 # local database directory
 data

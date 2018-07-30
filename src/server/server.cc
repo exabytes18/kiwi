@@ -1,4 +1,4 @@
-#include "config.h"
+#include "common/config.h"
 #if defined(HAVE_EPOLL)
     #include <sys/epoll.h>
 #elif defined(HAVE_KQUEUE)
@@ -10,8 +10,8 @@
 #include <sstream>
 #include <unistd.h>
 
-#include "exceptions.h"
-#include "io_utils.h"
+#include "common/exceptions.h"
+#include "common/io_utils.h"
 #include "server.h"
 
 
@@ -215,6 +215,10 @@ void Server::RecvData(Connection* connection) {
                         switch (incoming_message_type_int) {
                             case Protocol::MessageType::CLIENT_HELLO:
                                 connection->read_state = Connection::ReadState::READING_CLIENT_HELLO_MAGIC_NUMBER;
+                                break;
+
+                            case Protocol::MessageType::CLIENT_TEST:
+                                connection->read_state = Connection::ReadState::READING_MESSAGE_TYPE;
                                 break;
 
                             case Protocol::MessageType::SERVER_HELLO:
@@ -421,6 +425,14 @@ void Server::SendClientHelloReply(Connection* connection) {
     Buffer& client_hello_reply_buffer = connection->outgoing_buffers.emplace_back(4);
     client_hello_reply_buffer.UnsafePutInt(Protocol::MessageType::CLIENT_HELLO_REPLY);
     client_hello_reply_buffer.Flip();
+    SetWriteInterest(connection, true);
+}
+
+
+void Server::SendClientTestReply(Connection* connection) {
+    Buffer& client_test_reply_buffer = connection->outgoing_buffers.emplace_back(4);
+    client_test_reply_buffer.UnsafePutInt(Protocol::MessageType::CLIENT_TEST_REPLY);
+    client_test_reply_buffer.Flip();
     SetWriteInterest(connection, true);
 }
 

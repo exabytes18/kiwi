@@ -1,29 +1,17 @@
 #include <iostream>
 #include <pthread.h>
 #include <signal.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include "server.h"
 
 
 using namespace std;
 
 static void PrintUsage(int argc, char * const argv[]) {
     const char * program_name = (argc > 0) ? (argv[0]) : ("(unknown)");
-    cerr << "usage: " << program_name << " config_file_path" << endl;
+    cerr << "usage: " << program_name << " server-address" << endl;
 }
 
 
-static int Run(const char * config_file_path, const sigset_t termination_signals) {
-    // Read the configuration file
-    ServerConfig config = ServerConfig::ParseFromFile(config_file_path);
-
-    // Initialize the storage
-    Storage storage(config);
-
-    // Start the server
-    Server server(config, storage);
-
+static int Run(const char * server_address, const sigset_t termination_signals) {
     // Wait for termination signal
     int termination_signal;
     int err = sigwait(&termination_signals, &termination_signal);

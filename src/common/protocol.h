@@ -16,6 +16,9 @@ namespace Protocol {
         CLIENT_HELLO =           0x40000000,
         CLIENT_HELLO_REPLY =     0x40000001,
 
+        CLIENT_TEST =            0x40000002,
+        CLIENT_TEST_REPLY =      0x40000003,
+
         SERVER_HELLO =           0x80000000,
         SERVER_HELLO_REPLY =     0x80000001,
     };

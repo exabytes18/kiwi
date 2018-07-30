@@ -3,9 +3,9 @@
 
 #include <deque>
 #include <set>
-#include "buffered_network_stream.h"
-#include "io_utils.h"
-#include "protocol.h"
+#include "common/buffered_network_stream.h"
+#include "common/io_utils.h"
+#include "common/protocol.h"
 #include "server_config.h"
 #include "storage.h"
 
@@ -69,6 +69,7 @@ private:
     void SendData(Connection* connection);
 
     void SendClientHelloReply(Connection* connection);
+    void SendClientTestReply(Connection* connection);
     void SendServerHelloReply(Connection* connection);    
 
     void StopReadingAndSendErrorReplyAndClose(Connection* connection, Protocol::ErrorCode error_code, std::string error_message);
