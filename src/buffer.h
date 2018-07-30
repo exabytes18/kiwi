@@ -8,15 +8,15 @@
 class Buffer {
 public:
     Buffer(size_t capacity);
-    ~Buffer(void);
+    ~Buffer(void) noexcept;
 
-    // No copying
-    Buffer(Buffer const& other) = delete;
-    Buffer& operator=(Buffer const& other) = delete;
+    // Copy constructor + copy assignment operator
+    Buffer(Buffer const& other);
+    Buffer& operator=(Buffer const& other);
 
-    // No moving
-    Buffer(Buffer&& other) = delete;
-    Buffer& operator=(Buffer&& other) = delete;
+    // Move constructor + move assignment operator
+    Buffer(Buffer&& other) noexcept;
+    Buffer& operator=(Buffer&& other) noexcept;
 
     size_t Position(void);
     void Position(size_t position);
@@ -29,7 +29,7 @@ public:
     size_t Remaining(void);
     void Clear(void);
     void Flip(void);
-    void FillFrom(Buffer* src);
+    void FillFrom(Buffer& src);
 
     /*
      * Reads the bytes from the data array, convert the value from network

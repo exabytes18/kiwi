@@ -6,13 +6,68 @@
 Buffer::Buffer(size_t capacity) :
         position(0),
         limit(capacity),
-        capacity(capacity) {
-    data = new char[capacity];
+        capacity(capacity),
+        data(new char[capacity]) {
 }
 
 
-Buffer::~Buffer(void) {
-    delete data;
+Buffer::~Buffer(void) noexcept {
+    delete[] data;
+}
+
+
+Buffer::Buffer(Buffer const& other) :
+        position(other.position),
+        limit(other.limit),
+        capacity(other.capacity),
+        data(new char[capacity]) {
+    std::memcpy(data, other.data, capacity);
+}
+
+
+Buffer& Buffer::operator=(Buffer const& other) {
+    if (this == &other) {
+        return *this;
+    }
+
+    if (data != nullptr) {
+        delete[] data;
+    }
+
+    position = other.position;
+    limit = other.limit;
+    capacity = other.capacity;
+    data = new char[capacity];
+    std::memcpy(data, other.data, capacity);
+    return *this;
+}
+
+
+Buffer::Buffer(Buffer&& other) noexcept :
+        position(other.position),
+        limit(other.limit),
+        capacity(other.capacity),
+        data(other.data) {
+    other.data = nullptr;
+}
+
+
+Buffer& Buffer::operator=(Buffer&& other) noexcept {
+    if (this == &other) {
+        return *this;
+    }
+
+    if (data != nullptr) {
+        delete[] data;
+    }
+
+    position = other.position;
+    limit = other.limit;
+    capacity = other.capacity;
+    data = other.data;
+
+    other.data = nullptr;
+    return *this;
 }
 
 
@@ -41,7 +96,7 @@ size_t Buffer::Capacity(void) {
 
 
 void Buffer::ResetAndGrow(size_t new_capacity) {
-    delete data;
+    delete[] data;
     data = nullptr;
 
     data = new char[new_capacity];
@@ -73,16 +128,16 @@ void Buffer::Flip(void) {
 }
 
 
-void Buffer::FillFrom(Buffer* src) {
-    size_t bytes_to_copy = src->Remaining();
+void Buffer::FillFrom(Buffer& src) {
+    size_t bytes_to_copy = src.Remaining();
     size_t space_available = Remaining();
     if (space_available < bytes_to_copy) {
         bytes_to_copy = space_available;
     }
 
-    std::memcpy(data + position, src->data + src->position, bytes_to_copy);
+    std::memcpy(data + position, src.data + src.position, bytes_to_copy);
     position += bytes_to_copy;
-    src->position += bytes_to_copy;
+    src.position += bytes_to_copy;
 }
 
 

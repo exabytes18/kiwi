@@ -28,9 +28,9 @@ int BufferedNetworkStream::GetFD(void) {
 }
 
 
-BufferedNetworkStream::Status BufferedNetworkStream::Fill(Buffer* buffer) {
-    while (buffer->Remaining() > 0) {
-        buffer->FillFrom(&read_buffer);
+BufferedNetworkStream::Status BufferedNetworkStream::Fill(Buffer& buffer) {
+    while (buffer.Remaining() > 0) {
+        buffer.FillFrom(read_buffer);
         if (read_buffer.Remaining() == 0) {
             auto data = read_buffer.Data();
             auto capacity = read_buffer.Capacity();
@@ -52,7 +52,7 @@ BufferedNetworkStream::Status BufferedNetworkStream::Fill(Buffer* buffer) {
         }
     }
 
-    if (buffer->Remaining() == 0) {
+    if (buffer.Remaining() == 0) {
         return Status::complete;
     } else {
         return Status::incomplete;
@@ -60,7 +60,7 @@ BufferedNetworkStream::Status BufferedNetworkStream::Fill(Buffer* buffer) {
 }
 
 
-BufferedNetworkStream::Status BufferedNetworkStream::Write(Buffer* buffer) {
+BufferedNetworkStream::Status BufferedNetworkStream::Write(Buffer& buffer) {
     if (flushing_in_progress) {
         Status status = Flush();
         if (status != Status::complete) {
@@ -68,7 +68,7 @@ BufferedNetworkStream::Status BufferedNetworkStream::Write(Buffer* buffer) {
         }
     }
 
-    while (buffer->Remaining() > 0) {
+    while (buffer.Remaining() > 0) {
         write_buffer.FillFrom(buffer);
         if (write_buffer.Remaining() == 0) {
             Status status = Flush();
@@ -78,7 +78,7 @@ BufferedNetworkStream::Status BufferedNetworkStream::Write(Buffer* buffer) {
         }
     }
 
-    if (buffer->Remaining() == 0) {
+    if (buffer.Remaining() == 0) {
         return Status::complete;
     } else {
         return Status::incomplete;

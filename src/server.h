@@ -52,7 +52,7 @@ private:
         Buffer incoming_cluster_name_buffer;
 
         // Temporary buffers for outgoing data
-        std::deque<Buffer*> outgoing_buffers;
+        std::deque<Buffer> outgoing_buffers;
     };
 
     ServerConfig const& config;
