@@ -1,0 +1,85 @@
+Buffers, alignment, and memcpy:
+
+    Buffer operations are extremely hot, so we also need them to be fast. At the same time, we must be careful to not over-optimize and then run into alignment issues.
+
+    Our strategy is to leverage memcpy to copy bytes into a properly aligned destination so that we can then safely read/write the value from the destination, thus avoiding a possible unaligned access.
+
+    Copying bytes, especially in very small chunks such as 4 bytes at a time, could be expensive. If the compiler is extremely naive, copying 4 bytes could require a function call to memcpy, which then copies the bytes 1-by-1 into the destination address, then a return back to the caller.
+
+    Luckily, modern optimizing compilers are able to inline and elide most of std::memcpy(), especially when targeting x86:
+
+        Source:
+            #include <cstring>
+            #include <string>
+            #include <stdio.h>
+            #include <iostream>
+
+            int main() {
+                char* src = new char[4];
+                char* dest = new char[4];
+                std::memcpy(dest, src, 4);
+                std::cout << dest << std::endl;
+                return 0;
+            }
+
+        Assembly:
+            main:
+            push    rbx
+            mov     edi, 4
+            call    operator new[](unsigned long)
+            mov     edi, 4
+            mov     rbx, rax
+            call    operator new[](unsigned long)
+            mov     edx, DWORD PTR [rbx]           <-------- memcpy, part 1
+            mov     edi, OFFSET FLAT:_ZSt4cout
+            mov     rsi, rax
+            mov     DWORD PTR [rax], edx           <-------- memcpy, part 2
+            call    std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*)
+            mov     rdi, rax
+            call    std::basic_ostream<char, std::char_traits<char> >& std::endl<char, std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&)
+            xor     eax, eax
+            pop     rbx
+            ret
+
+     Hence, we see that the compiler was able to reduce the memcpy() to just two instructions on x86 and the whole thing is safely aligned. Fast and safe, exactly what we want!
+
+     Note: by default, x86 CPUs have "Alignment Check" flag set to false, thus allowing unaligned reads. In fact, "System V ABI" says nothing about "Alignment Check", which compilers seam to interpret as it being safe to emit unaligned memory accesses. So, while it's technically possible to turn on the "Alignment Check" flag on an x86 CPU, doing so invalidates the code that compilers are emitting as well as increasing the likelihood of SIGBUS errors from GLIBC which also leverages unaligned memory accesses. All said and done, compilers expect x86 to handle unaligned memory accesses with no exception and emit instructions as such. Now, on the other hand, some non-x86 architectures do have more strict alignment requirements and the compiler MUST take more care to deal with these cases -- so while things might be fast on x86, that's not necessarily true for all architectures. But to be honest, I only care about x86 linux, so the story ends here.
+
+     Note2: It seems that std::memcpy() is a compiler level construct of which the compiler is free to substitute its own implementation and LTO is not strictly required for std::memcpy() to get inlined.
+
+     TL;DR: We use memcpy() within our Buffer implementation so that we delegate alignment issues to the compiler to resolve; compilers do well at optimizing memcpy() on x86, so this ends up being fast/low-cost on our primary target platform.
+
+
+LTO:
+    Link Time Optimization is actually very effective at inlining across complication units.
+
+    Additionally, combined with modern compilers' effectiveness at optimizing memcpy(), we see that seamingly expensive blocks of code get optimized to just a small amount of branch-free instructions.
+
+        Source:
+            #include "common/buffer.h"
+
+            int main(int argc) {
+                Buffer buffer(4);
+                buffer.UnsafePutInt(argc);
+                buffer.Flip();
+                return buffer.UnsafeGetInt();
+            }
+
+        Assembly:
+            _main:
+            0000000100424af0    pushq   %rbp
+            0000000100424af1    movq    %rsp, %rbp
+            0000000100424af4    movl    %edi, %eax
+            0000000100424af6    popq    %rbp
+            0000000100424af7    retq
+
+    Mind. Blown.
+
+    TL;DR: Feel free to split up code into multiple classes across different files. Our release build is configured to use LTO and LTO is actually pretty good about inlining code where it makes sense. Don't let perceived performance improvement of having all the code in the same compilation unit distract you from organizing code in a more understandable fashion.
+
+    Also, wtf... the compiler was smart enough to optimize away the dynamic memory allocation that happens inside of the Buffer object? Obviously, it can't always do this, but I find it impressive that it was able do to the appropriate analysis for this code.
+
+
+
+
+
