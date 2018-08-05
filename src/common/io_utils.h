@@ -9,10 +9,15 @@
 namespace IOUtils {
     class AutoCloseableSocket {
     public:
+        AutoCloseableSocket(int domain, int type, int protocol);
         AutoCloseableSocket(int fd) noexcept;
         ~AutoCloseableSocket(void) noexcept;
         int GetFD(void) noexcept;
-        void SetNonBlocking(void) noexcept;
+        void SetNonBlocking(bool nonblocking) noexcept;
+        void SetReuseAddr(bool reuse_addr) noexcept;
+        int Bind(struct sockaddr const* addr, socklen_t addrlen) noexcept;
+        int Connect(struct sockaddr const* addr, socklen_t addrlen) noexcept;
+        int GetErrorCode(void) noexcept;
 
         // Use default move constructor and move assignment operator
         AutoCloseableSocket(AutoCloseableSocket&& other) noexcept;
@@ -24,6 +29,19 @@ namespace IOUtils {
 
     private:
         int fd;
+    };
+
+    class AutoCloseableAddrInfo {
+    public:
+        AutoCloseableAddrInfo(SocketAddress const& address, struct addrinfo const& hints);
+        ~AutoCloseableAddrInfo(void) noexcept;
+
+        bool HasNext(void) noexcept;
+        struct addrinfo* Next(void) noexcept;
+
+    private:
+        struct addrinfo* addrs;
+        struct addrinfo* next;
     };
 
     void Close(int fd) noexcept;

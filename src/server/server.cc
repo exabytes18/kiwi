@@ -60,32 +60,32 @@ void* Server::ThreadWrapper(void* ptr) {
 }
 
 
-void Server::AddFD(int fd, short filter, void* data) {
+void Server::AddEventInterest(int ident, short filter, void* data) {
     struct kevent event;
-    EV_SET(&event, fd, filter, EV_ADD, 0, 0, data);
+    EV_SET(&event, ident, filter, EV_ADD, 0, 0, data);
 
     int err = kevent(kq, &event, 1, nullptr, 0, nullptr);
     if (err == -1) {
-        throw ServerException("Error adding (ident,filter) pair to kqueue: " + string(strerror(errno)));
+        throw IOException("Error adding (ident,filter) pair to kqueue: " + string(strerror(errno)));
     }
 
     if (event.flags & EV_ERROR) {
-        throw ServerException("Error adding (ident,filter) pair to kqueue: " + string(strerror(event.data)));
+        throw IOException("Error adding (ident,filter) pair to kqueue: " + string(strerror(event.data)));
     }
 }
 
 
-void Server::RemoveFD(int fd, short filter) {
+void Server::RemoveEventInterest(int ident, short filter) {
     struct kevent event;
-    EV_SET(&event, fd, filter, EV_DELETE, 0, 0, nullptr);
+    EV_SET(&event, ident, filter, EV_DELETE, 0, 0, nullptr);
 
     int err = kevent(kq, &event, 1, nullptr, 0, nullptr);
     if (err == -1) {
-        throw ServerException("Error removing (ident,filter) pair from kqueue: " + string(strerror(errno)));
+        throw IOException("Error removing (ident,filter) pair from kqueue: " + string(strerror(errno)));
     }
 
     if (event.flags & EV_ERROR) {
-        throw ServerException("Error removing (ident,filter) pair from kqueue: " + string(strerror(event.data)));
+        throw IOException("Error removing (ident,filter) pair from kqueue: " + string(strerror(event.data)));
     }
 }
 
@@ -100,8 +100,8 @@ void Server::ThreadMain(void) {
     IOUtils::AutoCloseableSocket listen_socket =
         IOUtils::CreateListenSocket(bind_address, use_ipv4, use_ipv6, 128);
 
-    listen_socket.SetNonBlocking();
-    AddFD(listen_socket.GetFD(), EVFILT_READ, nullptr);
+    listen_socket.SetNonBlocking(true);
+    AddEventInterest(listen_socket.GetFD(), EVFILT_READ, nullptr);
 
     // Start connection attempts for all higher-numbered peers
 
@@ -514,9 +514,9 @@ void Server::SendData(Connection* connection) {
 void Server::SetReadInterest(Connection* connection, bool interested_in_reads) {
     if (connection->interested_in_reads != interested_in_reads) {
         if (interested_in_reads) {
-            AddFD(connection->stream.GetFD(), EVFILT_READ, connection);
+            AddEventInterest(connection->stream.GetFD(), EVFILT_READ, connection);
         } else {
-            RemoveFD(connection->stream.GetFD(), EVFILT_READ);
+            RemoveEventInterest(connection->stream.GetFD(), EVFILT_READ);
         }
         connection->interested_in_reads = interested_in_reads;
     }
@@ -526,9 +526,9 @@ void Server::SetReadInterest(Connection* connection, bool interested_in_reads) {
 void Server::SetWriteInterest(Connection* connection, bool interested_in_writes) {
     if (connection->interested_in_writes != interested_in_writes) {
         if (interested_in_writes) {
-            AddFD(connection->stream.GetFD(), EVFILT_WRITE, connection);
+            AddEventInterest(connection->stream.GetFD(), EVFILT_WRITE, connection);
         } else {
-            RemoveFD(connection->stream.GetFD(), EVFILT_WRITE);
+            RemoveEventInterest(connection->stream.GetFD(), EVFILT_WRITE);
         }
         connection->interested_in_writes = interested_in_writes;
     }

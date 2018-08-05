@@ -13,6 +13,7 @@ public:
     BufferedNetworkStream(IOUtils::AutoCloseableSocket socket);
     ~BufferedNetworkStream(void);
     int GetFD(void);
+    int GetErrorCode(void) noexcept;
 
     /*
      * Return `complete` if we had enough bytes already or we could read

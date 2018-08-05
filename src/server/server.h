@@ -63,8 +63,8 @@ private:
 
     static void* ThreadWrapper(void* ptr);
     void ThreadMain(void);
-    void AddFD(int fd, short filter, void* data);
-    void RemoveFD(int fd, short filter);
+    void AddEventInterest(int ident, short filter, void* data);
+    void RemoveEventInterest(int ident, short filter);
     void RecvData(Connection* connection);
     void SendData(Connection* connection);
 

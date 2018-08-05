@@ -1,6 +1,8 @@
 #include <iostream>
 #include <pthread.h>
 #include <signal.h>
+#include "client.h"
+#include "common/constants.h"
 
 
 using namespace std;
@@ -11,7 +13,14 @@ static void PrintUsage(int argc, char * const argv[]) {
 }
 
 
-static int Run(const char * server_address, const sigset_t termination_signals) {
+static int Run(const char * address, const sigset_t termination_signals) {
+
+    // Parse the server address
+    SocketAddress server_address = SocketAddress::FromString(address, Constants::DEFAULT_PORT);
+
+    // Initialize the client
+    Client client(server_address);
+
     // Wait for termination signal
     int termination_signal;
     int err = sigwait(&termination_signals, &termination_signal);

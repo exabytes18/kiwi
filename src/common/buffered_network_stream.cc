@@ -14,7 +14,7 @@ BufferedNetworkStream::BufferedNetworkStream(IOUtils::AutoCloseableSocket socket
         read_buffer(64 * 1024),
         write_buffer(64 * 1024),
         flushing_in_progress(false) {
-    this->socket.SetNonBlocking();
+    this->socket.SetNonBlocking(true);
     read_buffer.Flip();
 }
 
@@ -25,6 +25,11 @@ BufferedNetworkStream::~BufferedNetworkStream(void) {
 
 int BufferedNetworkStream::GetFD(void) {
     return socket.GetFD();
+}
+
+
+int BufferedNetworkStream::GetErrorCode(void) noexcept {
+    return socket.GetErrorCode();
 }
 
 
