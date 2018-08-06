@@ -12,22 +12,10 @@
 #include "io_utils.h"
 
 
-static int OpenSocket(int domain, int type, int protocol) {
-    int fd = socket(domain, type, protocol);
-    if (fd == -1) {
-        throw IOException("Problem opening socket: " + std::string(strerror(errno)));
-    }
-
-    return fd;
-}
-
+using namespace std;
 
 BufferedSocket::BufferedSocket(int domain, int type, int protocol) :
-        BufferedSocket(OpenSocket(domain, type, protocol)) {}
-
-
-BufferedSocket::BufferedSocket(int fd) noexcept :
-        fd(fd),
+        Socket(domain, type, protocol),
         read_buffer(64 * 1024),
         write_buffer(64 * 1024),
         flushing_in_progress(false) {
@@ -35,20 +23,20 @@ BufferedSocket::BufferedSocket(int fd) noexcept :
 }
 
 
-BufferedSocket::~BufferedSocket(void) noexcept {
-    if (fd != -1) {
-        IOUtils::Close(fd);
-    }
+BufferedSocket::BufferedSocket(int fd) noexcept :
+        Socket(fd),
+        read_buffer(64 * 1024),
+        write_buffer(64 * 1024),
+        flushing_in_progress(false) {
+    read_buffer.Flip();
 }
 
 
 BufferedSocket::BufferedSocket(BufferedSocket&& other) noexcept :
-        fd(other.fd),
+        Socket(other.fd),
         read_buffer(other.read_buffer),
         write_buffer(other.write_buffer),
-        flushing_in_progress(other.flushing_in_progress) {
-    other.fd = -1;
-}
+        flushing_in_progress(other.flushing_in_progress) {}
 
 
 BufferedSocket& BufferedSocket::operator=(BufferedSocket&& other) noexcept {
@@ -56,87 +44,14 @@ BufferedSocket& BufferedSocket::operator=(BufferedSocket&& other) noexcept {
         return *this;
     }
 
-    if (fd != -1) {
-        IOUtils::Close(fd);
-    }
-
-    fd = other.fd;
     read_buffer = other.read_buffer;
     write_buffer = other.write_buffer;
     flushing_in_progress = other.flushing_in_progress;
-
-    other.fd = -1;
     return *this;
 }
 
 
-int BufferedSocket::GetFD(void) noexcept {
-    return fd;
-}
-
-
-void BufferedSocket::SetNonBlocking(bool nonblocking) noexcept {
-    for (;;) {
-        int existing_flags = fcntl(fd, F_GETFL);
-        if (existing_flags == -1) {
-            if (errno == EINTR) {
-                continue;
-            } else {
-                std::cerr << "Problem fetching fd flags: " << strerror(errno) << std::endl;
-                abort();
-            }
-        }
-
-        int updated_flags;
-        if (nonblocking) {
-            updated_flags = existing_flags | O_NONBLOCK;
-        } else {
-            updated_flags = existing_flags & ~O_NONBLOCK;
-        }
-
-        int result = fcntl(fd, F_SETFL, updated_flags);
-        if (result == -1) {
-            if (errno == EINTR) {
-                continue;
-            } else {
-                std::cerr << "Problem setting fd flags: " << strerror(errno) << std::endl;
-                abort();
-            }
-        }
-        return;
-    }
-}
-
-
-void BufferedSocket::SetReuseAddr(bool reuse_addr) noexcept {
-    int optval = (reuse_addr) ? (1) : (0);
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0) {
-        std::cerr << "WARNING: problem setting SO_REUSEADDR: " << strerror(errno) << std::endl;
-        abort();
-    }
-}
-
-
-int BufferedSocket::Bind(struct sockaddr const* addr, socklen_t addrlen) noexcept {
-    return bind(fd, addr, addrlen);
-}
-
-
-int BufferedSocket::Connect(struct sockaddr const* addr, socklen_t addrlen) noexcept {
-    return connect(fd, addr, addrlen);
-}
-
-
-int BufferedSocket::GetErrorCode(void) noexcept {
-    int optval;
-    socklen_t optsize;
-    int err = getsockopt(fd, SOL_SOCKET, SO_ERROR, &optval, &optsize);
-    if (err == -1) {
-        std::cerr << "WARNING: problem getting socket error status: " << strerror(errno) << std::endl;
-        abort();
-    }
-
-    return optval;
+BufferedSocket::~BufferedSocket(void) noexcept {
 }
 
 
@@ -153,7 +68,7 @@ BufferedSocket::RecvStatus BufferedSocket::Fill(Buffer& buffer) {
                 } else if (errno == ECONNREFUSED || errno == ECONNRESET) {
                     return RecvStatus::closed;
                 } else {
-                    throw IOException("Problem reading data from socket: " + std::string(strerror(errno)));
+                    throw IOException("Problem reading data from socket: " + string(strerror(errno)));
                 }
             } else if (bytes_read == 0) {
                 return RecvStatus::closed;
@@ -215,7 +130,7 @@ BufferedSocket::SendStatus BufferedSocket::Flush(void) {
             } else if (errno == ECONNREFUSED || errno == ECONNRESET) {
                 return SendStatus::closed;
             } else {
-                throw IOException("Problem reading data from socket: " + std::string(strerror(errno)));
+                throw IOException("Problem reading data from socket: " + string(strerror(errno)));
             }
         } else {
             write_buffer.Position(position + bytes_written);

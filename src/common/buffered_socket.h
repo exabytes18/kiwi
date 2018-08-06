@@ -7,9 +7,10 @@
 #include <sys/socket.h>
 
 #include "buffer.h"
+#include "socket.h"
 
 
-class BufferedSocket {
+class BufferedSocket : public Socket {
 public:
     enum class RecvStatus { complete, incomplete, closed };
     enum class SendStatus { complete, incomplete, closed };
@@ -17,12 +18,6 @@ public:
     BufferedSocket(int domain, int type, int protocol);
     BufferedSocket(int fd) noexcept;
     ~BufferedSocket(void) noexcept;
-    int GetFD(void) noexcept;
-    void SetNonBlocking(bool nonblocking) noexcept;
-    void SetReuseAddr(bool reuse_addr) noexcept;
-    int Bind(struct sockaddr const* addr, socklen_t addrlen) noexcept;
-    int Connect(struct sockaddr const* addr, socklen_t addrlen) noexcept;
-    int GetErrorCode(void) noexcept;
 
     /*
      * Return `complete` if we had enough bytes already or we could read
@@ -60,7 +55,6 @@ public:
     BufferedSocket& operator=(BufferedSocket const& other) = delete;
 
 private:
-    int fd;
     Buffer read_buffer;
     Buffer write_buffer;
     bool flushing_in_progress;

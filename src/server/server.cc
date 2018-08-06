@@ -96,7 +96,7 @@ void Server::ThreadMain(void) {
     auto use_ipv4 = config.UseIPV4();
     auto use_ipv6 = config.UseIPV6();
 
-    BufferedSocket listen_socket =
+    Socket listen_socket =
         IOUtils::CreateListenSocket(bind_address, use_ipv4, use_ipv6, 128);
 
     listen_socket.SetNonBlocking(true);
@@ -151,19 +151,24 @@ void Server::ThreadMain(void) {
                                 break;
                             }
                         } else {
-                            Connection* connection = new Connection(fd);
-
                             try {
-                                connections.insert(connection);
-                            } catch (...) {
-                                delete connection;
-                            }
+                                Connection* connection = new Connection(fd);
+                                try {
+                                    connections.insert(connection);
+                                } catch (...) {
+                                    delete connection;
+                                }
 
-                            try {
-                                SetReadInterest(connection, true);
+                                try {
+                                    SetReadInterest(connection, true);
+                                } catch (...) {
+                                    connections.erase(connection);
+                                    delete connection;
+                                }
+
                             } catch (...) {
-                                connections.erase(connection);
-                                delete connection;
+                                IOUtils::Close(fd);
+                                throw;
                             }
                         }
                     }

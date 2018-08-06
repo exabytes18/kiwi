@@ -11,7 +11,7 @@
 #include <sstream>
 #include <unistd.h>
 
-#include "common/buffer.h"
+#include "common/buffered_socket.h"
 #include "common/exceptions.h"
 #include "common/io_utils.h"
 #include "common/protocol.h"

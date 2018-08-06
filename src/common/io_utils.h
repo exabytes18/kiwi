@@ -4,7 +4,7 @@
 #include <netdb.h>
 #include <string>
 
-#include "buffered_socket.h"
+#include "socket.h"
 #include "socket_address.h"
 
 
@@ -24,7 +24,7 @@ namespace IOUtils {
 
     void Close(int fd) noexcept;
     void ForceWriteByte(int fd, char c) noexcept;
-    BufferedSocket CreateListenSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6, int backlog);
+    Socket CreateListenSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6, int backlog);
 }
 
 #endif  // KIWI_IO_UTILS_H_
