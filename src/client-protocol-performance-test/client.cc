@@ -12,7 +12,6 @@
 #include <unistd.h>
 
 #include "common/buffer.h"
-#include "common/buffered_network_stream.h"
 #include "common/exceptions.h"
 #include "common/io_utils.h"
 #include "common/protocol.h"
@@ -88,9 +87,11 @@ void Client::ThreadMain(void) {
         IOUtils::AutoCloseableAddrInfo addrs(server_address, hints);
         while (!shutdown && addrs.HasNext()) {
             struct addrinfo* addr = addrs.Next();
-            IOUtils::AutoCloseableSocket socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
 
-            Buffer read_buffer(64 * 1024);
+            BufferedSocket socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+            socket.SetNonBlocking(true);
+
+            Buffer sink(64 * 1024);
             Buffer client_hello(12);
             Buffer client_test(4);
 
@@ -116,10 +117,8 @@ void Client::ThreadMain(void) {
                 }
             }
 
-            BufferedNetworkStream stream(std::move(socket));
-
             bool closed = false;
-            AddEventInterest(stream.GetFD(), EVFILT_WRITE, nullptr);
+            AddEventInterest(socket.GetFD(), EVFILT_WRITE, nullptr);
             while (!shutdown && !closed) {
                 struct kevent events[64];
                 int num_events = kevent(kq, nullptr, 0, events, sizeof(events) / sizeof(events[0]), nullptr);
@@ -144,14 +143,15 @@ void Client::ThreadMain(void) {
                     } else {
                         switch (event->filter) {
                             case EVFILT_READ:
-                                switch (stream.Fill(read_buffer)) {
-                                    case BufferedNetworkStream::Status::complete:
+                                switch (socket.Fill(sink)) {
+                                    case BufferedSocket::RecvStatus::complete:
+                                        sink.Clear();
                                         break;
 
-                                    case BufferedNetworkStream::Status::incomplete:
+                                    case BufferedSocket::RecvStatus::incomplete:
                                         break;
 
-                                    case BufferedNetworkStream::Status::closed:
+                                    case BufferedSocket::RecvStatus::closed:
                                         closed = true;
                                         break;
                                 }
@@ -159,35 +159,37 @@ void Client::ThreadMain(void) {
 
                             case EVFILT_WRITE:
                                 if (connected) {
-                                    switch (stream.Write(client_hello)) {
-                                        case BufferedNetworkStream::Status::complete:
+                                    switch (socket.Write(client_hello)) {
+                                        case BufferedSocket::SendStatus::complete:
                                             break;
 
-                                        case BufferedNetworkStream::Status::incomplete:
+                                        case BufferedSocket::SendStatus::incomplete:
                                             break;
 
-                                        case BufferedNetworkStream::Status::closed:
+                                        case BufferedSocket::SendStatus::closed:
                                             closed = true;
                                             break;
                                     }
 
-                                    switch (stream.Write(client_test)) {
-                                        case BufferedNetworkStream::Status::complete:
+                                    switch (socket.Write(client_test)) {
+                                        case BufferedSocket::SendStatus::complete:
                                             client_test.Flip();
                                             break;
 
-                                        case BufferedNetworkStream::Status::incomplete:
+                                        case BufferedSocket::SendStatus::incomplete:
                                             break;
 
-                                        case BufferedNetworkStream::Status::closed:
+                                        case BufferedSocket::SendStatus::closed:
                                             closed = true;
                                             break;
                                     }
 
+                                    // TODO: flush?
+
                                 } else {
-                                    if (stream.GetErrorCode() == 0) {
+                                    if (socket.GetErrorCode() == 0) {
                                         connected = true;
-                                        AddEventInterest(stream.GetFD(), EVFILT_READ, nullptr);
+                                        AddEventInterest(socket.GetFD(), EVFILT_READ, nullptr);
                                     } else {
                                         closed = true;
                                     }

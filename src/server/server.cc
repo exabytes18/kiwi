@@ -11,7 +11,6 @@
 #include <unistd.h>
 
 #include "common/exceptions.h"
-#include "common/io_utils.h"
 #include "server.h"
 
 
@@ -97,7 +96,7 @@ void Server::ThreadMain(void) {
     auto use_ipv4 = config.UseIPV4();
     auto use_ipv6 = config.UseIPV6();
 
-    IOUtils::AutoCloseableSocket listen_socket =
+    BufferedSocket listen_socket =
         IOUtils::CreateListenSocket(bind_address, use_ipv4, use_ipv6, 128);
 
     listen_socket.SetNonBlocking(true);
@@ -140,8 +139,8 @@ void Server::ThreadMain(void) {
                     for (int i = 0; i < 64; i++) {
                         struct sockaddr_storage sockaddr;
                         socklen_t address_len = sizeof(sockaddr);
-                        IOUtils::AutoCloseableSocket socket(accept(listen_socket.GetFD(), (struct sockaddr *)&sockaddr, &address_len));
-                        if (socket.GetFD() == -1) {
+                        int fd = accept(listen_socket.GetFD(), (struct sockaddr *)&sockaddr, &address_len);
+                        if (fd == -1) {
                             if (errno == EINTR) {
                                 continue;
                             } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -152,7 +151,7 @@ void Server::ThreadMain(void) {
                                 break;
                             }
                         } else {
-                            Connection* connection = new Connection(move(socket));
+                            Connection* connection = new Connection(fd);
 
                             try {
                                 connections.insert(connection);
@@ -207,8 +206,8 @@ void Server::RecvData(Connection* connection) {
         switch (connection->read_state) {
             case Connection::ReadState::READING_MESSAGE_TYPE:
                 cout << "READING_MESSAGE_TYPE" << endl;
-                switch (connection->stream.Fill(connection->incoming_message_type_buffer)) {
-                    case BufferedNetworkStream::Status::complete:
+                switch (connection->socket.Fill(connection->incoming_message_type_buffer)) {
+                    case BufferedSocket::RecvStatus::complete:
                         connection->incoming_message_type_buffer.Flip();
                         incoming_message_type_int = connection->incoming_message_type_buffer.UnsafeGetInt();
                         connection->incoming_message_type_buffer.Clear();
@@ -231,10 +230,10 @@ void Server::RecvData(Connection* connection) {
                         }
                         break;
 
-                    case BufferedNetworkStream::Status::incomplete:
+                    case BufferedSocket::RecvStatus::incomplete:
                         return;
 
-                    case BufferedNetworkStream::Status::closed:
+                    case BufferedSocket::RecvStatus::closed:
                         CloseAndDestroy(connection);
                         return;
                 }
@@ -242,8 +241,8 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_CLIENT_HELLO_MAGIC_NUMBER:
                 cout << "READING_CLIENT_HELLO_MAGIC_NUMBER" << endl;
-                switch (connection->stream.Fill(connection->incoming_magic_number_buffer)) {
-                    case BufferedNetworkStream::Status::complete:
+                switch (connection->socket.Fill(connection->incoming_magic_number_buffer)) {
+                    case BufferedSocket::RecvStatus::complete:
                         connection->incoming_magic_number_buffer.Flip();
                         incoming_magic_number = connection->incoming_magic_number_buffer.UnsafeGetInt();
                         connection->incoming_magic_number_buffer.Clear();
@@ -257,10 +256,10 @@ void Server::RecvData(Connection* connection) {
                         }
                         break;
 
-                    case BufferedNetworkStream::Status::incomplete:
+                    case BufferedSocket::RecvStatus::incomplete:
                         return;
 
-                    case BufferedNetworkStream::Status::closed:
+                    case BufferedSocket::RecvStatus::closed:
                         CloseAndDestroy(connection);
                         return;
                 }
@@ -268,8 +267,8 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_CLIENT_HELLO_PROTOCOL_VERSION:
                 cout << "READING_CLIENT_HELLO_PROTOCOL_VERSION" << endl;
-                switch (connection->stream.Fill(connection->incoming_protocol_version_buffer)) {
-                    case BufferedNetworkStream::Status::complete:
+                switch (connection->socket.Fill(connection->incoming_protocol_version_buffer)) {
+                    case BufferedSocket::RecvStatus::complete:
                         connection->incoming_protocol_version_buffer.Flip();
                         incoming_protocol_version = connection->incoming_protocol_version_buffer.UnsafeGetInt();
                         connection->incoming_protocol_version_buffer.Clear();
@@ -284,10 +283,10 @@ void Server::RecvData(Connection* connection) {
                         }
                         break;
 
-                    case BufferedNetworkStream::Status::incomplete:
+                    case BufferedSocket::RecvStatus::incomplete:
                         return;
 
-                    case BufferedNetworkStream::Status::closed:
+                    case BufferedSocket::RecvStatus::closed:
                         CloseAndDestroy(connection);
                         return;
                 }
@@ -295,8 +294,8 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_MAGIC_NUMBER:
                 cout << "READING_SERVER_HELLO_MAGIC_NUMBER" << endl;
-                switch (connection->stream.Fill(connection->incoming_magic_number_buffer)) {
-                    case BufferedNetworkStream::Status::complete:
+                switch (connection->socket.Fill(connection->incoming_magic_number_buffer)) {
+                    case BufferedSocket::RecvStatus::complete:
                         connection->incoming_magic_number_buffer.Flip();
                         incoming_magic_number = connection->incoming_magic_number_buffer.UnsafeGetInt();
                         connection->incoming_magic_number_buffer.Clear();
@@ -310,10 +309,10 @@ void Server::RecvData(Connection* connection) {
                         }
                         break;
 
-                    case BufferedNetworkStream::Status::incomplete:
+                    case BufferedSocket::RecvStatus::incomplete:
                         return;
 
-                    case BufferedNetworkStream::Status::closed:
+                    case BufferedSocket::RecvStatus::closed:
                         CloseAndDestroy(connection);
                         return;
                 }
@@ -321,8 +320,8 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_PROTOCOL_VERSION:
                 cout << "READING_SERVER_HELLO_PROTOCOL_VERSION" << endl;
-                switch (connection->stream.Fill(connection->incoming_protocol_version_buffer)) {
-                    case BufferedNetworkStream::Status::complete:
+                switch (connection->socket.Fill(connection->incoming_protocol_version_buffer)) {
+                    case BufferedSocket::RecvStatus::complete:
                         connection->incoming_protocol_version_buffer.Flip();
                         incoming_protocol_version = connection->incoming_protocol_version_buffer.UnsafeGetInt();
                         connection->incoming_protocol_version_buffer.Clear();
@@ -336,10 +335,10 @@ void Server::RecvData(Connection* connection) {
                         }
                         break;
 
-                    case BufferedNetworkStream::Status::incomplete:
+                    case BufferedSocket::RecvStatus::incomplete:
                         return;
 
-                    case BufferedNetworkStream::Status::closed:
+                    case BufferedSocket::RecvStatus::closed:
                         CloseAndDestroy(connection);
                         return;
                 }
@@ -347,18 +346,18 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_SERVER_ID:
                 cout << "READING_SERVER_HELLO_SERVER_ID" << endl;
-                switch (connection->stream.Fill(connection->incoming_server_id_buffer)) {
-                    case BufferedNetworkStream::Status::complete:
+                switch (connection->socket.Fill(connection->incoming_server_id_buffer)) {
+                    case BufferedSocket::RecvStatus::complete:
                         connection->incoming_server_id_buffer.Flip();
                         connection->server_id = connection->incoming_server_id_buffer.UnsafeGetInt();
                         connection->incoming_server_id_buffer.Clear();
                         connection->read_state = Connection::ReadState::READING_SERVER_HELLO_CLUSTER_NAME_LENGTH;
                         break;
 
-                    case BufferedNetworkStream::Status::incomplete:
+                    case BufferedSocket::RecvStatus::incomplete:
                         return;
 
-                    case BufferedNetworkStream::Status::closed:
+                    case BufferedSocket::RecvStatus::closed:
                         CloseAndDestroy(connection);
                         return;
                 }
@@ -366,18 +365,18 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_CLUSTER_NAME_LENGTH:
                 cout << "READING_SERVER_HELLO_CLUSTER_NAME_LENGTH" << endl;
-                switch (connection->stream.Fill(connection->incoming_cluster_name_length_buffer)) {
-                    case BufferedNetworkStream::Status::complete:
+                switch (connection->socket.Fill(connection->incoming_cluster_name_length_buffer)) {
+                    case BufferedSocket::RecvStatus::complete:
                         connection->incoming_cluster_name_length_buffer.Flip();
                         incoming_cluster_name_length = connection->incoming_cluster_name_length_buffer.UnsafeGetShort();
                         connection->incoming_cluster_name_buffer.ResetAndGrow(incoming_cluster_name_length);
                         connection->read_state = Connection::ReadState::READING_SERVER_HELLO_CLUSTER_NAME;
                         break;
 
-                    case BufferedNetworkStream::Status::incomplete:
+                    case BufferedSocket::RecvStatus::incomplete:
                         return;
 
-                    case BufferedNetworkStream::Status::closed:
+                    case BufferedSocket::RecvStatus::closed:
                         CloseAndDestroy(connection);
                         return;
                 }
@@ -385,8 +384,8 @@ void Server::RecvData(Connection* connection) {
 
             case Connection::ReadState::READING_SERVER_HELLO_CLUSTER_NAME:
                 cout << "READING_SERVER_HELLO_CLUSTER_NAME" << endl;
-                switch (connection->stream.Fill(connection->incoming_cluster_name_buffer)) {
-                    case BufferedNetworkStream::Status::complete:
+                switch (connection->socket.Fill(connection->incoming_cluster_name_buffer)) {
+                    case BufferedSocket::RecvStatus::complete:
                         connection->incoming_cluster_name_buffer.Flip();
                         incoming_cluster_name = connection->incoming_cluster_name_buffer.UnsafeGetString(connection->incoming_cluster_name_buffer.Limit());
                         connection->incoming_cluster_name_buffer.Clear();
@@ -400,10 +399,10 @@ void Server::RecvData(Connection* connection) {
                         }
                         break;
 
-                    case BufferedNetworkStream::Status::incomplete:
+                    case BufferedSocket::RecvStatus::incomplete:
                         return;
 
-                    case BufferedNetworkStream::Status::closed:
+                    case BufferedSocket::RecvStatus::closed:
                         CloseAndDestroy(connection);
                         return;
                 }
@@ -478,22 +477,22 @@ void Server::SendData(Connection* connection) {
     auto it = connection->outgoing_buffers.begin();
     while (it != connection->outgoing_buffers.end()) {
         Buffer& buffer = *it;
-        switch (connection->stream.Write(buffer)) {
-            case BufferedNetworkStream::Status::complete:
+        switch (connection->socket.Write(buffer)) {
+            case BufferedSocket::SendStatus::complete:
                 it = connection->outgoing_buffers.erase(it);
                 break;
 
-            case BufferedNetworkStream::Status::incomplete:
+            case BufferedSocket::SendStatus::incomplete:
                 return;
 
-            case BufferedNetworkStream::Status::closed:
+            case BufferedSocket::SendStatus::closed:
                 CloseAndDestroy(connection);
                 return;
         }
     }
 
-    switch (connection->stream.Flush()) {
-        case BufferedNetworkStream::Status::complete:
+    switch (connection->socket.Flush()) {
+        case BufferedSocket::SendStatus::complete:
             if (connection->close_connection_after_all_buffers_have_been_flushed) {
                 CloseAndDestroy(connection);
             } else {
@@ -501,10 +500,10 @@ void Server::SendData(Connection* connection) {
             }
             return;
 
-        case BufferedNetworkStream::Status::incomplete:
+        case BufferedSocket::SendStatus::incomplete:
             return;
 
-        case BufferedNetworkStream::Status::closed:
+        case BufferedSocket::SendStatus::closed:
             CloseAndDestroy(connection);
             return;
     }
@@ -514,9 +513,9 @@ void Server::SendData(Connection* connection) {
 void Server::SetReadInterest(Connection* connection, bool interested_in_reads) {
     if (connection->interested_in_reads != interested_in_reads) {
         if (interested_in_reads) {
-            AddEventInterest(connection->stream.GetFD(), EVFILT_READ, connection);
+            AddEventInterest(connection->socket.GetFD(), EVFILT_READ, connection);
         } else {
-            RemoveEventInterest(connection->stream.GetFD(), EVFILT_READ);
+            RemoveEventInterest(connection->socket.GetFD(), EVFILT_READ);
         }
         connection->interested_in_reads = interested_in_reads;
     }
@@ -526,9 +525,9 @@ void Server::SetReadInterest(Connection* connection, bool interested_in_reads) {
 void Server::SetWriteInterest(Connection* connection, bool interested_in_writes) {
     if (connection->interested_in_writes != interested_in_writes) {
         if (interested_in_writes) {
-            AddEventInterest(connection->stream.GetFD(), EVFILT_WRITE, connection);
+            AddEventInterest(connection->socket.GetFD(), EVFILT_WRITE, connection);
         } else {
-            RemoveEventInterest(connection->stream.GetFD(), EVFILT_WRITE);
+            RemoveEventInterest(connection->socket.GetFD(), EVFILT_WRITE);
         }
         connection->interested_in_writes = interested_in_writes;
     }
@@ -542,8 +541,8 @@ void Server::CloseAndDestroy(Connection* connection) {
 }
 
 
-Server::Connection::Connection(IOUtils::AutoCloseableSocket socket) :
-        stream(move(socket)),
+Server::Connection::Connection(int fd) :
+        socket(fd),
         interested_in_reads(false),
         interested_in_writes(false),
         read_state(ReadState::READING_MESSAGE_TYPE),
@@ -555,6 +554,7 @@ Server::Connection::Connection(IOUtils::AutoCloseableSocket socket) :
         incoming_cluster_name_length_buffer(2),
         incoming_cluster_name_buffer(0),
         outgoing_buffers() {
+    socket.SetNonBlocking(true);
 }
 
 

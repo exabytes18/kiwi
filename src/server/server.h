@@ -3,7 +3,7 @@
 
 #include <deque>
 #include <set>
-#include "common/buffered_network_stream.h"
+#include "common/buffered_socket.h"
 #include "common/io_utils.h"
 #include "common/protocol.h"
 #include "server_config.h"
@@ -18,7 +18,7 @@ public:
 private:
     class Connection {
     public:
-        Connection(IOUtils::AutoCloseableSocket socket);
+        Connection(int fd);
         ~Connection(void);
 
         enum class ReadState {
@@ -34,7 +34,7 @@ private:
         };
 
         // High-level connection state
-        BufferedNetworkStream stream;
+        BufferedSocket socket;
         bool interested_in_reads;
         bool interested_in_writes;
         ReadState read_state;
