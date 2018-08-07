@@ -1,16 +1,11 @@
 #ifndef KIWI_BUFFERED_SOCKET_H_
 #define KIWI_BUFFERED_SOCKET_H_
 
-#include <stdint.h>
-#include <string>
-#include <sys/types.h>
-#include <sys/socket.h>
-
+#include "abstract_socket.h"
 #include "buffer.h"
-#include "socket.h"
 
 
-class BufferedSocket : public Socket {
+class BufferedSocket : public AbstractSocket {
 public:
     enum class RecvStatus { complete, incomplete, closed };
     enum class SendStatus { complete, incomplete, closed };

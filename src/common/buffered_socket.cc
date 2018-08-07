@@ -1,11 +1,7 @@
 #include <errno.h>
-#include <fcntl.h>
 #include <iostream>
-#include <netdb.h>
-#include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include "buffered_socket.h"
 #include "exceptions.h"
@@ -15,7 +11,7 @@
 using namespace std;
 
 BufferedSocket::BufferedSocket(int domain, int type, int protocol) :
-        Socket(domain, type, protocol),
+        AbstractSocket(domain, type, protocol),
         read_buffer(64 * 1024),
         write_buffer(64 * 1024),
         flushing_in_progress(false) {
@@ -24,7 +20,7 @@ BufferedSocket::BufferedSocket(int domain, int type, int protocol) :
 
 
 BufferedSocket::BufferedSocket(int fd) noexcept :
-        Socket(fd),
+        AbstractSocket(fd),
         read_buffer(64 * 1024),
         write_buffer(64 * 1024),
         flushing_in_progress(false) {
@@ -33,10 +29,12 @@ BufferedSocket::BufferedSocket(int fd) noexcept :
 
 
 BufferedSocket::BufferedSocket(BufferedSocket&& other) noexcept :
-        Socket(other.fd),
+        AbstractSocket(other.fd),
         read_buffer(other.read_buffer),
         write_buffer(other.write_buffer),
-        flushing_in_progress(other.flushing_in_progress) {}
+        flushing_in_progress(other.flushing_in_progress) {
+    other.fd = -1;
+}
 
 
 BufferedSocket& BufferedSocket::operator=(BufferedSocket&& other) noexcept {
@@ -44,9 +42,16 @@ BufferedSocket& BufferedSocket::operator=(BufferedSocket&& other) noexcept {
         return *this;
     }
 
+    if (fd != -1) {
+        IOUtils::Close(fd);
+    }
+
+    fd = other.fd;
     read_buffer = other.read_buffer;
     write_buffer = other.write_buffer;
     flushing_in_progress = other.flushing_in_progress;
+
+    other.fd = -1;
     return *this;
 }
 

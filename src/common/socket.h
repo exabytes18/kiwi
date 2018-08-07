@@ -6,18 +6,15 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include "abstract_socket.h"
+#include "buffer.h"
 
-class Socket {
+
+class Socket : public AbstractSocket {
 public:
-    Socket(int domain, int type, int protocol) noexcept;
+    Socket(int domain, int type, int protocol);
     Socket(int fd) noexcept;
     ~Socket(void) noexcept;
-    int GetFD(void) noexcept;
-    void SetNonBlocking(bool nonblocking) noexcept;
-    void SetReuseAddr(bool reuse_addr) noexcept;
-    int Bind(struct sockaddr const* addr, socklen_t addrlen) noexcept;
-    int Connect(struct sockaddr const* addr, socklen_t addrlen) noexcept;
-    int GetErrorCode(void) noexcept;
 
     // Move constructor + move assignment operator
     Socket(Socket&& other) noexcept;
@@ -26,9 +23,6 @@ public:
     // Delete copy constructor and copy assignment operator
     Socket(Socket const& other) = delete;
     Socket& operator=(Socket const& other) = delete;
-
-protected:
-    int fd;
 };
 
 #endif  // KIWI_SOCKET_H_

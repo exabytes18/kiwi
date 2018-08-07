@@ -7,7 +7,6 @@
 
 #include <errno.h>
 #include <iostream>
-#include <sstream>
 #include <unistd.h>
 
 #include "common/exceptions.h"

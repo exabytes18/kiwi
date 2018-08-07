@@ -2,8 +2,6 @@
 #define KIWI_IO_UTILS_H_
 
 #include <netdb.h>
-#include <string>
-
 #include "socket.h"
 #include "socket_address.h"
 

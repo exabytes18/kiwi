@@ -8,7 +8,6 @@
 #include <errno.h>
 #include <exception>
 #include <iostream>
-#include <sstream>
 #include <unistd.h>
 
 #include "common/buffered_socket.h"

@@ -1,8 +1,7 @@
 #ifndef KIWI_CLIENT_H_
 #define KIWI_CLIENT_H_
 
-#include <stdint.h>
-#include <string>
+#include <pthread.h>
 #include "common/socket_address.h"
 
 
