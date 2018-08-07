@@ -14,20 +14,6 @@
 
 using namespace std;
 
-static int CreateSocket(int domain, int type, int protocol) {
-    int fd = socket(domain, type, protocol);
-    if (fd == -1) {
-        throw IOException("Problem opening socket: " + string(strerror(errno)));
-    }
-
-    return fd;
-}
-
-
-AbstractSocket::AbstractSocket(int domain, int type, int protocol) noexcept :
-        AbstractSocket(CreateSocket(domain, type, protocol)) {}
-
-
 AbstractSocket::AbstractSocket(int fd) noexcept :
         fd(fd) {}
 
@@ -113,6 +99,11 @@ int AbstractSocket::Bind(struct sockaddr const* addr, socklen_t addrlen) noexcep
 
 int AbstractSocket::Connect(struct sockaddr const* addr, socklen_t addrlen) noexcept {
     return connect(fd, addr, addrlen);
+}
+
+
+int AbstractSocket::Listen(int backlog) noexcept {
+    return listen(fd, backlog);
 }
 
 

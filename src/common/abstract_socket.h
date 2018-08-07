@@ -1,8 +1,8 @@
 #ifndef KIWI_ABSTRACT_SOCKET_H_
 #define KIWI_ABSTRACT_SOCKET_H_
 
-#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 
 
 class AbstractSocket {
@@ -12,12 +12,12 @@ public:
     void SetReuseAddr(bool reuse_addr) noexcept;
     int Bind(struct sockaddr const* addr, socklen_t addrlen) noexcept;
     int Connect(struct sockaddr const* addr, socklen_t addrlen) noexcept;
+    int Listen(int backlog) noexcept;
     int GetErrorCode(void) noexcept;
 
 protected:
     int fd;
 
-    AbstractSocket(int domain, int type, int protocol) noexcept;
     AbstractSocket(int fd) noexcept;
     ~AbstractSocket(void) noexcept;
 

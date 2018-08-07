@@ -3,7 +3,7 @@
 
 
 Socket::Socket(int domain, int type, int protocol) :
-        AbstractSocket(domain, type, protocol) {}
+        Socket(IOUtils::OpenSocketFD(domain, type, protocol)) {}
 
 
 Socket::Socket(int fd) noexcept :

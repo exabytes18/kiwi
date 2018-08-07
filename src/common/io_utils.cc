@@ -50,51 +50,13 @@ void IOUtils::ForceWriteByte(int fd, char c) noexcept {
 }
 
 
-static Socket OpenAndBindSocket(IOUtils::AutoCloseableAddrInfo& addrs) {
-    while (addrs.HasNext()) {
-        struct addrinfo* addr = addrs.Next();
-
-        Socket socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-        socket.SetReuseAddr(true);
-        if (socket.Bind(addr->ai_addr, addr->ai_addrlen) == -1) {
-            throw IOException("Problem calling bind(2): " + std::string(strerror(errno)));
-        }
-
-        return socket;
+int IOUtils::OpenSocketFD(int domain, int type, int protocol) {
+    int fd = socket(domain, type, protocol);
+    if (fd == -1) {
+        throw IOException("Problem opening socket: " + std::string(strerror(errno)));
     }
 
-    throw IOException("Unable to create socket: " + std::string(strerror(errno)));
-}
-
-
-static Socket OpenAndBindSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6) {
-    int ai_family;
-    if (use_ipv4 && use_ipv6) {
-        ai_family = AF_UNSPEC;
-    } else if (use_ipv4) {
-        ai_family = AF_INET;
-    } else if (use_ipv6) {
-        ai_family = AF_INET6;
-    } else {
-        ai_family = AF_UNSPEC;
-    }
-
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = ai_family;
-    hints.ai_socktype = SOCK_STREAM;
-
-    IOUtils::AutoCloseableAddrInfo addrs(address, hints);
-    return OpenAndBindSocket(addrs);
-}
-
-
-Socket IOUtils::CreateListenSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6, int backlog) {
-    Socket socket = OpenAndBindSocket(address, use_ipv4, use_ipv6);
-    if (listen(socket.GetFD(), backlog) != 0) {
-        throw IOException("Problem listening to socket: " + std::string(strerror(errno)));
-    }
-    return socket;
+    return fd;
 }
 
 

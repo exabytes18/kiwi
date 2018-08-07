@@ -11,12 +11,7 @@
 using namespace std;
 
 BufferedSocket::BufferedSocket(int domain, int type, int protocol) :
-        AbstractSocket(domain, type, protocol),
-        read_buffer(64 * 1024),
-        write_buffer(64 * 1024),
-        flushing_in_progress(false) {
-    read_buffer.Flip();
-}
+        BufferedSocket(IOUtils::OpenSocketFD(domain, type, protocol)) {}
 
 
 BufferedSocket::BufferedSocket(int fd) noexcept :

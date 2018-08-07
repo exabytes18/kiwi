@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "common/exceptions.h"
+#include "common/socket.h"
 #include "server.h"
 
 
@@ -88,6 +89,25 @@ void Server::RemoveEventInterest(int ident, short filter) {
 }
 
 
+static Socket CreateListenSocket(IOUtils::AutoCloseableAddrInfo& addrs) {
+    while (addrs.HasNext()) {
+        struct addrinfo* addr = addrs.Next();
+
+        Socket socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+        socket.SetReuseAddr(true);
+        if (socket.Bind(addr->ai_addr, addr->ai_addrlen) == -1) {
+            throw IOException("Problem calling bind(2): " + string(strerror(errno)));
+        }
+        if (socket.Listen(128) == -1) {
+            throw IOException("Problem calling listen(2): " + string(strerror(errno)));
+        }
+        return socket;
+    }
+
+    throw IOException("Unable to create socket: " + string(strerror(errno)));
+}
+
+
 void Server::ThreadMain(void) {
 
     auto hosts = config.Hosts();
@@ -95,8 +115,24 @@ void Server::ThreadMain(void) {
     auto use_ipv4 = config.UseIPV4();
     auto use_ipv6 = config.UseIPV6();
 
-    Socket listen_socket =
-        IOUtils::CreateListenSocket(bind_address, use_ipv4, use_ipv6, 128);
+    int ai_family;
+    if (use_ipv4 && use_ipv6) {
+        ai_family = AF_UNSPEC;
+    } else if (use_ipv4) {
+        ai_family = AF_INET;
+    } else if (use_ipv6) {
+        ai_family = AF_INET6;
+    } else {
+        ai_family = AF_UNSPEC;
+    }
+
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = ai_family;
+    hints.ai_socktype = SOCK_STREAM;
+
+    IOUtils::AutoCloseableAddrInfo addrs(bind_address, hints);
+    Socket listen_socket = CreateListenSocket(addrs);
 
     listen_socket.SetNonBlocking(true);
     AddEventInterest(listen_socket.GetFD(), EVFILT_READ, nullptr);

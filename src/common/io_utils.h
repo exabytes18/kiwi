@@ -2,7 +2,6 @@
 #define KIWI_IO_UTILS_H_
 
 #include <netdb.h>
-#include "socket.h"
 #include "socket_address.h"
 
 
@@ -22,7 +21,7 @@ namespace IOUtils {
 
     void Close(int fd) noexcept;
     void ForceWriteByte(int fd, char c) noexcept;
-    Socket CreateListenSocket(SocketAddress const& address, bool use_ipv4, bool use_ipv6, int backlog);
+    int OpenSocketFD(int domain, int type, int protocol);
 }
 
 #endif  // KIWI_IO_UTILS_H_
