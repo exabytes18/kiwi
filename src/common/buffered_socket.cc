@@ -30,8 +30,8 @@ BufferedSocket::BufferedSocket(int fd) noexcept :
 
 BufferedSocket::BufferedSocket(BufferedSocket&& other) noexcept :
         AbstractSocket(other.fd),
-        read_buffer(other.read_buffer),
-        write_buffer(other.write_buffer),
+        read_buffer(move(other.read_buffer)),
+        write_buffer(move(other.write_buffer)),
         flushing_in_progress(other.flushing_in_progress) {
     other.fd = -1;
 }
@@ -47,8 +47,8 @@ BufferedSocket& BufferedSocket::operator=(BufferedSocket&& other) noexcept {
     }
 
     fd = other.fd;
-    read_buffer = other.read_buffer;
-    write_buffer = other.write_buffer;
+    read_buffer = move(other.read_buffer);
+    write_buffer = move(other.write_buffer);
     flushing_in_progress = other.flushing_in_progress;
 
     other.fd = -1;
